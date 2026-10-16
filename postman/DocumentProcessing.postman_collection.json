@@ -1,0 +1,77 @@
+{
+  "info": {
+    "name": "Document Processing API",
+    "description": "Local collection for the document processing orchestration API. OCR is simulated by MockOcrProvider.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5280" },
+    { "key": "documentId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Upload PAN",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/documents/upload",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerId\": \"CUST-1001\",\n  \"documentType\": \"PAN\",\n  \"fileName\": \"sample-pan.txt\",\n  \"fileContentBase64\": \"RE9DVU1FTlQgVFlQRTogUEFO\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Upload with transient OCR failure",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/documents/upload",
+        "description": "File names containing __failonce, __timeout, __permanent, or __interrupt change mock OCR behavior.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerId\": \"CUST-1002\",\n  \"documentType\": \"AADHAR\",\n  \"fileName\": \"aadhar__failonce.txt\",\n  \"fileContentBase64\": \"c2FtcGxl\"\n}"
+        }
+      }
+    },
+    {
+      "name": "List documents",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/documents?page=1&pageSize=20&status=&documentType="
+      }
+    },
+    {
+      "name": "Summary",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/documents/summary" }
+    },
+    {
+      "name": "Recent activity",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/documents/activity?take=8" }
+    },
+    {
+      "name": "Get document",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/documents/{{documentId}}" }
+    },
+    {
+      "name": "Get status",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/documents/{{documentId}}/status" }
+    },
+    {
+      "name": "Get status by document path",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/documents/status/{{documentId}}" }
+    },
+    {
+      "name": "Get history",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/documents/{{documentId}}/history" }
+    },
+    {
+      "name": "Retry",
+      "request": { "method": "POST", "url": "{{baseUrl}}/api/documents/{{documentId}}/retry" }
+    },
+    {
+      "name": "Compliance rules",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/compliance-rules" }
+    }
+  ]
+}
