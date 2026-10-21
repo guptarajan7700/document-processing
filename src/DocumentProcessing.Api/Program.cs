@@ -32,14 +32,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AngularDev", policy =>
-        policy.WithOrigins("http://localhost:4200")
-            .AllowAnyHeader()
-            .AllowAnyMethod());
-});
-
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddProcessingTools();
 builder.Services.AddProcessingAgents();
@@ -67,7 +59,6 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<CorrelationMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Document Processing API v1"));
-app.UseCors("AngularDev");
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new
 {
