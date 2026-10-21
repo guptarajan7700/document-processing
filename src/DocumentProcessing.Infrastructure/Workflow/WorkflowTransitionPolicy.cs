@@ -7,6 +7,7 @@ namespace DocumentProcessing.Infrastructure.Workflow;
 /// </summary>
 public static class WorkflowTransitionPolicy
 {
+    // Role: Decides whether a status change is legal. Next: SqlTool.ExecuteStatusProcedureAsync in SqlTool.cs when this returns true.
     public static bool IsAllowed(string fromStatus, string toStatus, bool isExplicitRetry)
     {
         if (!WorkflowStatus.IsKnown(fromStatus) || !WorkflowStatus.IsKnown(toStatus))
@@ -34,6 +35,7 @@ public static class WorkflowTransitionPolicy
         };
     }
 
+    // Role: Throws when the status change is not allowed. Next: the caller stops and the API returns HTTP 409.
     public static void Ensure(string fromStatus, string toStatus, bool isExplicitRetry)
     {
         if (!IsAllowed(fromStatus, toStatus, isExplicitRetry))

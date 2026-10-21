@@ -20,6 +20,7 @@ public sealed class VirusScanAgent(
     public const string PassedMessage =
         "Virus scan passed. This is a mock signature check, not a real antivirus engine.";
 
+    // Role: Scans the file name and writes RECEIVED or REJECTED. Next: MockVirusScanTool.ScanAsync in VirusScanTool.cs.
     public async Task<AgentStepResult> ExecuteAsync(Guid documentId, Guid correlationId, CancellationToken cancellationToken)
     {
         using var activity = ProcessingTelemetry.Start("VirusScanAgent", documentId, correlationId, AgentNames.VirusScan, ToolNames.VirusScan);

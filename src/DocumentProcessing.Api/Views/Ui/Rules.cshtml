@@ -1,0 +1,42 @@
+@model RulesPage
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Sample checks</p>
+        <h2>Compliance rules</h2>
+        <p>Active sample rules loaded from SQL Server. Length checks do not prove a document is genuine. Editing is not available.</p>
+    </div>
+    <a class="btn secondary" href="/compliance-rules">Refresh</a>
+</div>
+<section class="panel">
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <div class="error-panel"><p>@Model.Error</p></div>
+    }
+    else if (Model.Rules.Count == 0)
+    {
+        <p class="empty">No compliance rules are configured.</p>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Type</th><th>Rule</th><th>Kind</th><th>Expected length</th><th>Active</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var rule in Model.Rules)
+                    {
+                        <tr>
+                            <td>@rule.DocumentType</td>
+                            <td>@rule.RuleName</td>
+                            <td>@rule.RuleKind</td>
+                            <td>@(rule.ExpectedLength?.ToString() ?? "—")</td>
+                            <td>@(rule.IsActive ? "Yes" : "No")</td>
+                            <td>@rule.Description</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

@@ -21,6 +21,7 @@ public sealed class DocumentsController(
     [HttpPost("upload")]
     [ProducesResponseType(typeof(UploadDocumentResponse), StatusCodes.Status202Accepted)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    // Role: Accepts the upload and returns 202. Next: DocumentIntakeAgent.AcceptAsync in DocumentIntakeAgent.cs.
     public async Task<ActionResult<UploadDocumentResponse>> Upload([FromBody] UploadDocumentRequest request, CancellationToken cancellationToken)
     {
         var documentId = await intake.AcceptAsync(new DocumentIntakeRequest
@@ -39,6 +40,7 @@ public sealed class DocumentsController(
 
     [HttpGet("summary")]
     [ProducesResponseType(typeof(DocumentSummaryResponse), StatusCodes.Status200OK)]
+    // Role: Returns status counts. Next: SqlTool.GetStatusCountsAsync in SqlTool.cs. Does not process a document.
     public async Task<ActionResult<DocumentSummaryResponse>> Summary(CancellationToken cancellationToken)
     {
         var counts = await sql.GetStatusCountsAsync(cancellationToken);
@@ -57,6 +59,7 @@ public sealed class DocumentsController(
 
     [HttpGet("activity")]
     [ProducesResponseType(typeof(IReadOnlyList<WorkflowHistoryResponse>), StatusCodes.Status200OK)]
+    // Role: Returns the latest audit rows. Next: SqlTool.GetRecentActivityAsync in SqlTool.cs.
     public async Task<ActionResult<IReadOnlyList<WorkflowHistoryResponse>>> Activity([FromQuery] int take = 8, CancellationToken cancellationToken = default)
     {
         var rows = await sql.GetRecentActivityAsync(take, cancellationToken);
@@ -66,6 +69,7 @@ public sealed class DocumentsController(
     [HttpGet]
     [ProducesResponseType(typeof(PagedDocumentsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    // Role: Returns the paged document list. Next: SqlTool.ListDocumentsAsync in SqlTool.cs.
     public async Task<ActionResult<PagedDocumentsResponse>> List(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
@@ -105,6 +109,7 @@ public sealed class DocumentsController(
     [HttpGet("{documentId:guid}")]
     [ProducesResponseType(typeof(DocumentDetailsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    // Role: Returns metadata, OCR text, and the approval or rejection message. Next: SqlTool.GetDocumentAsync in SqlTool.cs.
     public async Task<ActionResult<DocumentDetailsResponse>> Get(Guid documentId, CancellationToken cancellationToken)
     {
         var document = await sql.GetDocumentAsync(documentId, cancellationToken) ?? throw new DocumentNotFoundException(documentId);
@@ -142,6 +147,7 @@ public sealed class DocumentsController(
     [HttpGet("{documentId:guid}/status")]
     [ProducesResponseType(typeof(DocumentStatusResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    // Role: Returns the current status only. Next: SqlTool.GetDocumentAsync in SqlTool.cs.
     public async Task<ActionResult<DocumentStatusResponse>> Status(Guid documentId, CancellationToken cancellationToken)
     {
         var document = await sql.GetDocumentAsync(documentId, cancellationToken) ?? throw new DocumentNotFoundException(documentId);
@@ -158,6 +164,7 @@ public sealed class DocumentsController(
     [HttpGet("{documentId:guid}/history")]
     [ProducesResponseType(typeof(IReadOnlyList<WorkflowHistoryResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    // Role: Returns the audit trail, oldest first. Next: SqlTool.GetHistoryAsync in SqlTool.cs.
     public async Task<ActionResult<IReadOnlyList<WorkflowHistoryResponse>>> History(Guid documentId, CancellationToken cancellationToken)
     {
         _ = await sql.GetDocumentAsync(documentId, cancellationToken) ?? throw new DocumentNotFoundException(documentId);
@@ -169,6 +176,7 @@ public sealed class DocumentsController(
     [ProducesResponseType(typeof(WorkflowActionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    // Role: Restarts a non-terminal workflow. Next: DocumentWorkflowService.RetryAsync in DocumentWorkflowRunner.cs.
     public async Task<ActionResult<WorkflowActionResponse>> Retry(Guid documentId, CancellationToken cancellationToken)
     {
         var result = await workflows.RetryAsync(documentId, CorrelationId, cancellationToken);
@@ -182,11 +190,13 @@ public sealed class DocumentsController(
         return result.Outcome == "Duplicate" ? Conflict(response) : Ok(response);
     }
 
+    // Role: Reads the correlation id stored by the middleware. Next: the action method that called this property.
     private Guid CorrelationId =>
         HttpContext.Items.TryGetValue(CorrelationMiddleware.ItemKey, out var value) && value is Guid id
             ? id
             : Guid.NewGuid();
 
+    // Role: Maps a database row to the list JSON. Next: the HTTP response is returned.
     private static DocumentResponse MapDocument(DocumentRecord document) => new()
     {
         DocumentId = document.DocumentId,
@@ -198,6 +208,7 @@ public sealed class DocumentsController(
         LatestMessage = document.LatestMessage
     };
 
+    // Role: Maps one audit row to the history JSON. Next: the HTTP response is returned.
     private static WorkflowHistoryResponse MapHistory(WorkflowHistoryEntry entry) => new()
     {
         Id = entry.Id,

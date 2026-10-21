@@ -1,0 +1,59 @@
+@model DashboardPage
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Today</p>
+        <h2>Dashboard</h2>
+        <p>Counts and the latest audit events from the same service the API uses.</p>
+    </div>
+    <a class="btn secondary" href="/dashboard">Refresh</a>
+</div>
+<div class="pipeline">
+    <span>Received</span>
+    <span>Virus scan</span>
+    <span>Read file</span>
+    <span>Rules</span>
+    <span>Approved or rejected</span>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="panel error-panel">
+        <p>@Model.Error</p>
+        <a class="btn" href="/dashboard">Try again</a>
+    </div>
+}
+else
+{
+    <section class="cards">
+        <a class="card" href="/documents"><div class="label">Total documents</div><div class="value">@Model.Counts.Total</div></a>
+        <a class="card" href="/documents?status=RECEIVED"><div class="label">Received</div><div class="value">@Model.Counts.Received</div></a>
+        <a class="card tone-progress" href="/documents?status=OCR_IN_PROGRESS"><div class="label">OCR in progress</div><div class="value">@Model.Counts.OcrInProgress</div></a>
+        <a class="card tone-bad" href="/documents?status=OCR_FAILED"><div class="label">OCR failures</div><div class="value">@Model.Counts.OcrFailed</div></a>
+        <a class="card tone-ok" href="/documents?status=OCR_Success"><div class="label">OCR success</div><div class="value">@Model.Counts.OcrSuccess</div></a>
+        <a class="card tone-warn" href="/documents?status=COMPLIANCE_CHECK_IN_PROGRESS"><div class="label">Compliance in progress</div><div class="value">@Model.Counts.ComplianceInProgress</div></a>
+        <a class="card tone-ok" href="/documents?status=APPROVED"><div class="label">Approved</div><div class="value">@Model.Counts.Approved</div></a>
+        <a class="card tone-bad" href="/documents?status=REJECTED"><div class="label">Rejected</div><div class="value">@Model.Counts.Rejected</div></a>
+    </section>
+
+    <section class="panel section-gap">
+        <h3>Recent workflow activity</h3>
+        @if (Model.Activity.Count == 0)
+        {
+            <p class="empty">No workflow events yet. Upload a document to start a workflow.</p>
+        }
+        else
+        {
+            <ul class="timeline">
+                @foreach (var item in Model.Activity)
+                {
+                    <li>
+                        <div class="when">@item.Timestamp.ToLocalTime().ToString("dd MMM yyyy, HH:mm") · @(item.AgentName ?? "System")</div>
+                        <div><span class="badge @UiText.BadgeClass(item.Status)">@UiText.StatusLabel(item.Status)</span></div>
+                        <p>@item.Message</p>
+                        <a href="/documents/@item.DocumentId/history">View history</a>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+}

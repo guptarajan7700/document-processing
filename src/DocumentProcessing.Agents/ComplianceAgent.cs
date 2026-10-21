@@ -21,6 +21,7 @@ public sealed class ComplianceAgent(
     public const string CompensationMessage =
         "Compensation: compliance step failed permanently. Status rolled back to OCR_Success so the workflow can resume without repeating OCR.";
 
+    // Role: Checks OCR text against the SQL rules and sets APPROVED or REJECTED. Next: ComplianceRulesTool.GetRulesAsync in ComplianceRulesTool.cs.
     public async Task<AgentStepResult> ExecuteAsync(Guid documentId, Guid correlationId, CancellationToken cancellationToken)
     {
         using var activity = ProcessingTelemetry.Start("ComplianceAgent", documentId, correlationId, AgentNames.Compliance, ToolNames.ValidateText);
@@ -120,6 +121,7 @@ public sealed class ComplianceAgent(
             cancellationToken);
     }
 
+    // Role: Rolls a permanent compliance failure back to OCR_Success. Next: SqlTool.UpdateWorkflowStatusAsync in SqlTool.cs.
     private async Task<AgentStepResult> CompensateAsync(
         Guid documentId,
         Guid correlationId,
@@ -141,6 +143,7 @@ public sealed class ComplianceAgent(
         return new AgentStepResult { Succeeded = false, Status = WorkflowStatus.OcrSuccess, Message = CompensationMessage };
     }
 
+    // Role: Writes the final APPROVED or REJECTED audit. Next: SqlTool.UpdateWorkflowStatusAsync in SqlTool.cs.
     private async Task<AgentStepResult> FinishAsync(
         Guid documentId,
         Guid correlationId,

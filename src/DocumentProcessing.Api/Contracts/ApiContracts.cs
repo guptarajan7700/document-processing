@@ -66,7 +66,7 @@ public sealed class OcrDetailsResponse
     public string ExtractedText { get; set; } = string.Empty;
     public int AttemptNumber { get; set; }
     public DateTime CreatedOn { get; set; }
-    public string Notice { get; set; } = "Text was read from the submitted file. An image is not optically scanned, so a text file must contain the identifier.";
+    public string Notice { get; set; } = "Text was read from the submitted file. An image is read with Windows OCR on this PC.";
 }
 
 public sealed class ComplianceDetailsResponse

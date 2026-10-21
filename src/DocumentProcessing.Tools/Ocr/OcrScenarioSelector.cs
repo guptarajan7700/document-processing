@@ -9,6 +9,7 @@ public sealed class OcrScenarioSelector(IOptions<OcrOptions> options) : IOcrScen
     private readonly ConcurrentDictionary<Guid, OcrScenario> _overrides = new();
     private readonly OcrScenario _default = Parse(options.Value.DefaultScenario);
 
+    // Role: Reads __failonce, __timeout, __permanent, or __interrupt from the file name. Next: MockOcrProvider.ExtractTextAsync in MockOcrProvider.cs.
     public OcrScenario Resolve(Guid documentId, string fileName)
     {
         if (_overrides.TryGetValue(documentId, out var scenario))
@@ -40,8 +41,10 @@ public sealed class OcrScenarioSelector(IOptions<OcrOptions> options) : IOcrScen
         return _default;
     }
 
+    // Role: Forces a test scenario for one document. Next: Resolve in this file returns that scenario.
     public void SetScenario(Guid documentId, OcrScenario scenario) => _overrides[documentId] = scenario;
 
+    // Role: Reads the default scenario from configuration. Next: Resolve in this file uses it when the file name has no marker.
     public static OcrScenario Parse(string? value) =>
         Enum.TryParse<OcrScenario>(value, ignoreCase: true, out var scenario)
             ? scenario

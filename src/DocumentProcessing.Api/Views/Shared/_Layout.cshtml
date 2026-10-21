@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Document Processing</title>
+    <link rel="stylesheet" href="~/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body>
+    @{
+        var path = Context.Request.Path.Value ?? "/";
+        string Active(string href, bool exact = false) =>
+            exact
+                ? string.Equals(path, href, StringComparison.OrdinalIgnoreCase) ? "active" : ""
+                : path.StartsWith(href, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    }
+    <div class="shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="mark">DP</span>
+                <div>
+                    <strong>Orchestrator</strong>
+                    <span>PAN · AADHAR · LOA</span>
+                </div>
+            </div>
+            <a class="nav-link @Active("/dashboard") @(path == "/" ? "active" : "")" href="/dashboard"><i></i>Dashboard</a>
+            <a class="nav-link @Active("/upload")" href="/upload"><i></i>Upload</a>
+            <a class="nav-link @Active("/documents", exact: true)" href="/documents"><i></i>Documents</a>
+            <a class="nav-link @Active("/compliance-rules")" href="/compliance-rules"><i></i>Compliance rules</a>
+            <p class="sidebar-note">Text files are read directly. Images are read with Windows OCR, then checked against the PAN, AADHAR, or LOA rules.</p>
+        </aside>
+        <div class="workspace">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Compliance desk</p>
+                    <h1>Document processing</h1>
+                </div>
+                <span class="live"><span class="dot"></span>Local workflow running</span>
+            </header>
+            <main class="page">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+</body>
+</html>

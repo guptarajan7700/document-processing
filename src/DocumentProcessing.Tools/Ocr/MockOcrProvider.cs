@@ -7,7 +7,7 @@ namespace DocumentProcessing.Tools.Ocr;
 
 /// <summary>
 /// Reads text from the submitted file and can simulate timeouts and failures.
-/// It decodes text files. It does not optically read characters from an image.
+/// Text files are decoded directly. Images are read with Windows OCR when that engine is on this PC.
 /// </summary>
 public sealed class MockOcrProvider(
     IOcrScenarioSelector scenarios,
@@ -20,6 +20,7 @@ public sealed class MockOcrProvider(
     public bool IsMock => true;
     public int CallCount => _callCount;
 
+    // Role: Simulates delay or failure, then reads the submitted file text. Next: SubmittedFileTextExtractor.ReadAsync in SubmittedFileTextExtractor.cs.
     public async Task<OcrExtraction> ExtractTextAsync(OcrExtractionRequest request, CancellationToken cancellationToken)
     {
         Interlocked.Increment(ref _callCount);
@@ -44,14 +45,16 @@ public sealed class MockOcrProvider(
             await Task.Delay(delay, cancellationToken);
         }
 
+        var read = await SubmittedFileTextExtractor.ReadAsync(request.FileName, request.Content, cancellationToken);
         return new OcrExtraction
         {
-            Text = SubmittedFileTextExtractor.Read(request.FileName, request.Content),
-            Provider = Name,
-            IsMock = true
+            Text = read.Text,
+            Provider = read.ImageProvider ?? Name,
+            IsMock = read.ImageProvider is null
         };
     }
 
+    // Role: Builds the old sample text used by tests only. Next: none in the live upload path.
     public static string BuildSampleText(string documentType) => documentType switch
     {
         DocumentTypes.Pan => "DOCUMENT TYPE: PAN\nNAME: SAMPLE HOLDER\nPAN: ABCDE1234F\nNOTE: MOCK OCR TEXT",
@@ -60,6 +63,7 @@ public sealed class MockOcrProvider(
         _ => "NOTE: MOCK OCR TEXT"
     };
 
+    // Role: Picks the simulated OCR wait between 1 and 3 seconds. Next: ExtractTextAsync continues after the delay.
     private static int NextDelay(WorkflowOptions options)
     {
         var min = Math.Max(0, options.OcrDelayMinMilliseconds);

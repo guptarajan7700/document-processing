@@ -1,0 +1,97 @@
+@model DocumentsPage
+@{
+    string PageUrl(int page)
+    {
+        var query = new List<string>();
+        if (!string.IsNullOrWhiteSpace(Model.Search)) query.Add("search=" + Uri.EscapeDataString(Model.Search));
+        if (!string.IsNullOrWhiteSpace(Model.Status)) query.Add("status=" + Uri.EscapeDataString(Model.Status));
+        if (!string.IsNullOrWhiteSpace(Model.DocumentType)) query.Add("documentType=" + Uri.EscapeDataString(Model.DocumentType));
+        if (page > 1) query.Add("page=" + page);
+        return "/documents" + (query.Count == 0 ? "" : "?" + string.Join("&", query));
+    }
+    string? Selected(string current, string value) => current == value ? "selected" : null;
+}
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Register</p>
+        <h2>Documents</h2>
+        <p>Search, filter, and open a workflow.</p>
+    </div>
+    <a class="btn secondary" href="@PageUrl(Model.Page)">Refresh</a>
+</div>
+<form class="filters panel" method="get" action="/documents">
+    <label class="field"><span>Search</span><input name="search" value="@Model.Search" placeholder="Customer, file name, or id" /></label>
+    <label class="field"><span>Status</span>
+        <select name="status">
+            <option value="">All</option>
+            <option value="RECEIVED" selected="@Selected(Model.Status, "RECEIVED")">Received</option>
+            <option value="OCR_IN_PROGRESS" selected="@Selected(Model.Status, "OCR_IN_PROGRESS")">OCR in progress</option>
+            <option value="OCR_FAILED" selected="@Selected(Model.Status, "OCR_FAILED")">OCR failed</option>
+            <option value="OCR_Success" selected="@Selected(Model.Status, "OCR_Success")">OCR success</option>
+            <option value="COMPLIANCE_CHECK_IN_PROGRESS" selected="@Selected(Model.Status, "COMPLIANCE_CHECK_IN_PROGRESS")">Compliance in progress</option>
+            <option value="APPROVED" selected="@Selected(Model.Status, "APPROVED")">Approved</option>
+            <option value="REJECTED" selected="@Selected(Model.Status, "REJECTED")">Rejected</option>
+        </select>
+    </label>
+    <label class="field"><span>Type</span>
+        <select name="documentType">
+            <option value="">All</option>
+            <option selected="@Selected(Model.DocumentType, "PAN")">PAN</option>
+            <option selected="@Selected(Model.DocumentType, "AADHAR")">AADHAR</option>
+            <option selected="@Selected(Model.DocumentType, "LOA")">LOA</option>
+        </select>
+    </label>
+    <button class="btn" type="submit">Apply</button>
+</form>
+
+<section class="panel section-gap">
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <div class="error-panel"><p>@Model.Error</p></div>
+    }
+    else if (Model.Items.Count == 0)
+    {
+        <p class="empty">No documents match these filters.</p>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="doc-table">
+                <thead>
+                    <tr><th>File</th><th>Customer</th><th>Type</th><th>Uploaded</th><th>Status</th><th>Latest result</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td data-label="File">
+                                <div>@item.FileName</div>
+                                <div class="mono help" title="@item.DocumentId">@item.DocumentId.ToString()[..8]</div>
+                            </td>
+                            <td data-label="Customer">@item.CustomerId</td>
+                            <td data-label="Type">@item.DocumentType</td>
+                            <td data-label="Uploaded">@item.UploadedOn.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</td>
+                            <td data-label="Status"><span class="badge @UiText.BadgeClass(item.CurrentStatus)">@UiText.StatusLabel(item.CurrentStatus)</span></td>
+                            <td data-label="Latest result" class="clip"><div class="clip-text" title="@item.LatestMessage">@(string.IsNullOrWhiteSpace(item.LatestMessage) ? "—" : item.LatestMessage)</div></td>
+                            <td data-label=""><a href="/documents/@item.DocumentId">View</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="pager">
+            <span class="help">@Model.TotalCount documents</span>
+            <div class="actions">
+                @if (Model.Page > 1)
+                {
+                    <a class="btn secondary" href="@PageUrl(Model.Page - 1)">Previous</a>
+                }
+                <span>Page @Model.Page</span>
+                @if (Model.Page * Model.PageSize < Model.TotalCount)
+                {
+                    <a class="btn secondary" href="@PageUrl(Model.Page + 1)">Next</a>
+                }
+            </div>
+        </div>
+    }
+</section>

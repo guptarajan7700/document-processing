@@ -8,6 +8,7 @@ public sealed class LocalDocumentFileStore(IOptions<StorageOptions> options) : I
 {
     private readonly StorageOptions _options = options.Value;
 
+    // Role: Writes the uploaded bytes to App_Data. Next: SqlTool.SaveDocumentMetadataAsync in SqlTool.cs.
     public async Task<string> SaveAsync(Guid documentId, string fileName, byte[] content, CancellationToken cancellationToken)
     {
         var safeName = Sanitize(fileName);
@@ -18,6 +19,7 @@ public sealed class LocalDocumentFileStore(IOptions<StorageOptions> options) : I
         return path;
     }
 
+    // Role: Reads the stored file for virus scan or OCR. Next: MockVirusScanTool.ScanAsync or OcrTool.ExtractTextAsync.
     public async Task<byte[]> ReadAsync(Guid documentId, string fileName, CancellationToken cancellationToken)
     {
         var path = Path.Combine(GetDirectory(documentId), Sanitize(fileName));
@@ -29,6 +31,7 @@ public sealed class LocalDocumentFileStore(IOptions<StorageOptions> options) : I
         return await File.ReadAllBytesAsync(path, cancellationToken);
     }
 
+    // Role: Deletes the file when intake fails after the file was saved. Next: none. The upload returns an error.
     public Task DeleteAsync(Guid documentId, string fileName, CancellationToken cancellationToken)
     {
         var path = Path.Combine(GetDirectory(documentId), Sanitize(fileName));
@@ -40,6 +43,7 @@ public sealed class LocalDocumentFileStore(IOptions<StorageOptions> options) : I
         return Task.CompletedTask;
     }
 
+    // Role: Builds the folder path for one document. Next: SaveAsync or ReadAsync in this file writes or reads the file.
     private string GetDirectory(Guid documentId)
     {
         var root = _options.RootPath;
@@ -51,6 +55,7 @@ public sealed class LocalDocumentFileStore(IOptions<StorageOptions> options) : I
         return Path.Combine(root, documentId.ToString("D"));
     }
 
+    // Role: Keeps only the file name so a path cannot escape the folder. Next: SaveAsync in this file.
     public static string Sanitize(string fileName)
     {
         var name = Path.GetFileName(fileName);

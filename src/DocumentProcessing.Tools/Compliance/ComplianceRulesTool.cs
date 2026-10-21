@@ -6,6 +6,7 @@ namespace DocumentProcessing.Tools.Compliance;
 
 public sealed class ComplianceRulesTool(ISqlTool sql, IMemoryCache cache) : IComplianceRulesTool
 {
+    // Role: Loads active rules, using a 60-second memory cache. Next: SqlTool.GetComplianceRulesAsync in SqlTool.cs on a cache miss.
     public async Task<IReadOnlyList<ComplianceRuleRecord>> GetRulesAsync(string? documentType, CancellationToken cancellationToken)
     {
         var key = "compliance-rules:" + (documentType ?? "*");
@@ -19,6 +20,7 @@ public sealed class ComplianceRulesTool(ISqlTool sql, IMemoryCache cache) : ICom
         return rules;
     }
 
+    // Role: Loads rules and checks the extracted text. Next: ComplianceTextValidator.Validate in ComplianceTextValidator.cs.
     public async Task<ComplianceValidationResult> ValidateTextAsync(
         string documentType,
         string extractedText,

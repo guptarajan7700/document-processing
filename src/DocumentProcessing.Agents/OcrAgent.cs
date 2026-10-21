@@ -24,6 +24,7 @@ public sealed class OcrAgent(
     public const string CompensationMessage =
         "Compensation: OCR failed permanently. Document metadata, stored file, and audit history were retained. Compliance was not started.";
 
+    // Role: Sets OCR_IN_PROGRESS, reads the file, and saves OCR_Success or OCR_FAILED. Next: OcrTool.ExtractTextAsync in OcrTool.cs.
     public async Task<AgentStepResult> ExecuteAsync(Guid documentId, Guid correlationId, CancellationToken cancellationToken)
     {
         using var activity = ProcessingTelemetry.Start("OcrAgent", documentId, correlationId, AgentNames.Ocr, ToolNames.ExtractText);
@@ -138,6 +139,7 @@ public sealed class OcrAgent(
             cancellationToken);
     }
 
+    // Role: Writes OCR_FAILED and the compensation audit. Next: SqlTool.UpdateWorkflowStatusAsync in SqlTool.cs. Compliance does not run.
     private async Task<AgentStepResult> FailPermanentAsync(
         Guid documentId,
         Guid correlationId,

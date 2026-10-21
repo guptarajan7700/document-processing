@@ -9,6 +9,7 @@ public static class ComplianceTextValidator
     public const string AuthenticityLimitation =
         "Sample length rules do not establish that the document is authentic.";
 
+    // Role: Applies the length rules and builds the approval or rejection remarks. Next: ComplianceAgent.FinishAsync in ComplianceAgent.cs.
     public static ComplianceValidationResult Validate(
         string documentType,
         string extractedText,
@@ -30,9 +31,34 @@ public static class ComplianceTextValidator
         if (identifier is null)
         {
             var otherType = FindOtherDocumentType(type, extractedText);
-            evaluations.Add(otherType is null
-                ? $"No {type} value was found in the text extracted from the submitted file."
-                : $"No {type} value was found in the submitted file. The file contains a {otherType} value.");
+            if (otherType is not null)
+            {
+                evaluations.Add($"No {type} value was found in the submitted file. The file contains a {otherType} value. {type} check failed.");
+            }
+            else if (extractedText.Contains(SubmittedFileTextExtractor.ImageUnreadMessage, StringComparison.Ordinal)
+                || extractedText.Contains(SubmittedFileTextExtractor.BinaryUnreadMessage, StringComparison.Ordinal))
+            {
+                evaluations.Add($"No {type} value was found in the text extracted from the submitted file. {type} check failed.");
+            }
+            else
+            {
+                var preview = extractedText.ReplaceLineEndings(" ").Trim();
+                if (preview.Length > 120)
+                {
+                    preview = preview[..120];
+                }
+
+                var shape = type switch
+                {
+                    DocumentTypes.Pan => " A PAN is 5 letters, 4 digits, and 1 letter, such as ABCDE1234F.",
+                    DocumentTypes.Aadhar => " An AADHAR number is 12 digits.",
+                    DocumentTypes.Loa => " An LOA reference looks like LOA-1001.",
+                    _ => string.Empty
+                };
+                evaluations.Add($"No {type} value was found in the text extracted from the submitted file. {type} check failed. Extracted text: {preview}.{shape}");
+            }
+
+            return Reject(identifier, evaluations);
         }
 
         if (activeRules.Length == 0)

@@ -25,11 +25,14 @@ public static class WorkflowStatus
         Rejected
     };
 
+    // Role: Checks that the status is one of the seven known values. Next: WorkflowTransitionPolicy.IsAllowed in WorkflowTransitionPolicy.cs.
     public static bool IsKnown(string? status) => status is not null && All.Contains(status);
 
+    // Role: True for APPROVED and REJECTED. Next: none. The workflow stops.
     public static bool IsTerminal(string? status) =>
         status is Approved or Rejected;
 
+    // Role: True when Retry is allowed. Next: DocumentsController.Retry in DocumentsController.cs.
     public static bool CanResume(string? status) =>
         status is Received or OcrInProgress or OcrFailed or OcrSuccess or ComplianceInProgress;
 }

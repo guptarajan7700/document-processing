@@ -1,0 +1,77 @@
+@model DetailsPage
+@section Head {
+    @if (Model.Refresh)
+    {
+        <meta http-equiv="refresh" content="2" />
+    }
+}
+@if (Model.Document is null)
+{
+    <div class="panel error-panel">
+        <p>@(Model.Error ?? "This document could not be loaded.")</p>
+        <a href="/documents">Back to documents</a>
+    </div>
+}
+else
+{
+    var document = Model.Document;
+    <div class="page-head">
+        <div>
+            <p class="eyebrow">Case file</p>
+            <h2>Document details</h2>
+            <p>@document.DocumentId</p>
+        </div>
+        <div class="actions">
+            <a class="btn secondary" href="/documents/@document.DocumentId">Refresh</a>
+            @if (Model.CanRetry)
+            {
+                <form method="post" action="/documents/@document.DocumentId/retry">
+                    @Html.AntiForgeryToken()
+                    <button class="btn" type="submit">@(document.CurrentStatus == "OCR_FAILED" ? "Retry" : "Resume")</button>
+                </form>
+            }
+        </div>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Notice))
+    {
+        <div class="notice" style="margin-bottom: 16px;">@Model.Notice</div>
+    }
+    @if (Model.Refresh)
+    {
+        <p class="working"><span class="spinner"></span> Checking the submitted file. This page refreshes until the workflow finishes.</p>
+    }
+    <section class="cards">
+        <article class="card"><div class="label">Customer</div><div class="value" style="font-size:1.35rem">@document.CustomerId</div></article>
+        <article class="card"><div class="label">Type</div><div class="value" style="font-size:1.35rem">@document.DocumentType</div></article>
+        <article class="card"><div class="label">File</div><div class="value" style="font-size:1.35rem">@document.FileName</div></article>
+        <article class="card"><div class="label">Uploaded</div><div class="value" style="font-size:1.15rem">@document.UploadedOn.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</div></article>
+    </section>
+    <section class="panel stack section-gap">
+        <div>Current status <span class="badge @UiText.BadgeClass(document.CurrentStatus)">@UiText.StatusLabel(document.CurrentStatus)</span></div>
+        @if (document.CurrentStatus is "REJECTED" or "OCR_FAILED")
+        {
+            <div class="error-panel">
+                <strong>Validation failed</strong>
+                <p>@(string.IsNullOrWhiteSpace(Model.ComplianceRemarks) ? "The submitted file did not pass validation." : Model.ComplianceRemarks)</p>
+            </div>
+        }
+        <a href="/documents/@document.DocumentId/history">Open workflow history</a>
+        @if (Model.Ocr is null)
+        {
+            <p class="help">OCR text is not available yet.</p>
+        }
+        else
+        {
+            <div class="notice">@DetailsPage.OcrNotice Provider: @Model.Ocr.Provider. Attempt @Model.Ocr.AttemptNumber.</div>
+            <div class="identifier">@(string.IsNullOrWhiteSpace(Model.Ocr.ExtractedIdentifier) ? "Identifier not found" : Model.Ocr.ExtractedIdentifier)</div>
+            <pre class="extract">@Model.Ocr.ExtractedText</pre>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.ComplianceDecision) && document.CurrentStatus != "REJECTED")
+        {
+            <div>
+                <strong>Compliance:</strong> @Model.ComplianceDecision
+                <p>@Model.ComplianceRemarks</p>
+            </div>
+        }
+    </section>
+}

@@ -5,6 +5,7 @@ namespace DocumentProcessing.Tools.Compliance;
 
 public static partial class DocumentIdentifierExtractor
 {
+    // Role: Finds the PAN, AADHAR, or LOA token in the extracted text. Next: SqlTool.SaveExtractedTextAsync in SqlTool.cs.
     public static string? Extract(string documentType, string? text)
     {
         if (string.IsNullOrWhiteSpace(text))

@@ -1,0 +1,42 @@
+@model UploadPage
+@{
+    var maxMb = Math.Max(1, (int)Math.Round(Model.MaxUploadBytes / (1024d * 1024d)));
+}
+<div class="page-head">
+    <div>
+        <p class="eyebrow">New case</p>
+        <h2>Upload document</h2>
+        <p>Accepted types are PAN, AADHAR, and LOA. The file text must contain a matching identifier. Maximum size @maxMb MB.</p>
+    </div>
+</div>
+<form class="panel form-grid" method="post" action="/upload" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <label class="field">
+        <span>Customer ID</span>
+        <input name="customerId" maxlength="64" autocomplete="off" value="@Model.CustomerId" />
+    </label>
+    <label class="field">
+        <span>Document type</span>
+        <select name="documentType">
+            <option value="">Select a type</option>
+            <option value="PAN" selected="@(Model.DocumentType == "PAN" ? "selected" : null)">PAN</option>
+            <option value="AADHAR" selected="@(Model.DocumentType == "AADHAR" ? "selected" : null)">AADHAR</option>
+            <option value="LOA" selected="@(Model.DocumentType == "LOA" ? "selected" : null)">LOA</option>
+        </select>
+    </label>
+    <label class="field file-well">
+        <span>File</span>
+        <input type="file" name="file" />
+        <small class="help">Use a text file or an image. A PAN looks like ABCDE1234F. An AADHAR number is 12 digits. Example text: PAN ABCDE1234F.</small>
+    </label>
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <div class="error-panel">
+            <strong>Upload failed</strong>
+            <p>@Model.Error</p>
+        </div>
+    }
+    <div class="actions">
+        <button class="btn" type="submit">Upload</button>
+    </div>
+</form>

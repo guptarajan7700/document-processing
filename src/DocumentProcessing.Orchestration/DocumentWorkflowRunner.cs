@@ -21,6 +21,7 @@ public sealed class DocumentWorkflowService(
     IOptions<WorkflowOptions> options,
     ILogger<DocumentWorkflowService> logger)
 {
+    // Role: Locks the document and runs the agent workflow. Next: SqlTool.TryAcquireLockAsync in SqlTool.cs.
     public async Task<WorkflowExecutionResult> ExecuteAsync(Guid documentId, Guid correlationId, CancellationToken cancellationToken)
     {
         var lockToken = Guid.NewGuid();
@@ -89,6 +90,7 @@ public sealed class DocumentWorkflowService(
         }
     }
 
+    // Role: Allows an explicit retry from OCR_FAILED, then runs the workflow. Next: ExecuteAsync in this file.
     public async Task<WorkflowExecutionResult> RetryAsync(Guid documentId, Guid correlationId, CancellationToken cancellationToken)
     {
         var document = await sql.GetDocumentAsync(documentId, cancellationToken)
@@ -117,6 +119,7 @@ public sealed class DocumentWorkflowService(
         return await ExecuteAsync(documentId, correlationId, cancellationToken);
     }
 
+    // Role: Builds the Agent Framework graph and runs it. Next: CoordinatorExecutor.HandleAsync in this file.
     private async Task<WorkflowExecutionResult> RunFrameworkWorkflowAsync(
         Guid documentId,
         Guid correlationId,
@@ -177,6 +180,7 @@ public sealed class DocumentWorkflowService(
 
     private sealed class CoordinatorExecutor(CoordinatorAgent agent) : Executor<WorkflowMessage, WorkflowMessage>("coordinator-agent")
     {
+        // Role: Agent Framework entry for the coordinator. Next: CoordinatorAgent.DecideNextRouteAsync in CoordinatorAgent.cs.
         public override async ValueTask<WorkflowMessage> HandleAsync(
             WorkflowMessage message,
             IWorkflowContext context,
@@ -189,6 +193,7 @@ public sealed class DocumentWorkflowService(
 
     private sealed class VirusScanWorkflowExecutor(VirusScanAgent agent) : Executor<WorkflowMessage, WorkflowMessage>("virus-scan-agent")
     {
+        // Role: Runs the virus scan and routes to OCR or done. Next: VirusScanAgent.ExecuteAsync in VirusScanAgent.cs.
         public override async ValueTask<WorkflowMessage> HandleAsync(
             WorkflowMessage message,
             IWorkflowContext context,
@@ -202,6 +207,7 @@ public sealed class DocumentWorkflowService(
 
     private sealed class OcrWorkflowExecutor(OcrAgent agent, IWorkflowCheckpointGate gate) : Executor<WorkflowMessage, WorkflowMessage>("ocr-agent")
     {
+        // Role: Runs OCR, then the interrupt checkpoint. Next: OcrAgent.ExecuteAsync in OcrAgent.cs.
         public override async ValueTask<WorkflowMessage> HandleAsync(
             WorkflowMessage message,
             IWorkflowContext context,
@@ -228,6 +234,7 @@ public sealed class DocumentWorkflowService(
 
     private sealed class ComplianceWorkflowExecutor(ComplianceAgent agent) : Executor<WorkflowMessage, WorkflowMessage>("compliance-agent")
     {
+        // Role: Runs the rules check and then finishes. Next: ComplianceAgent.ExecuteAsync in ComplianceAgent.cs.
         public override async ValueTask<WorkflowMessage> HandleAsync(
             WorkflowMessage message,
             IWorkflowContext context,
@@ -240,6 +247,7 @@ public sealed class DocumentWorkflowService(
 
     private sealed class CompleteWorkflowExecutor(ISqlTool sqlTool) : Executor<WorkflowMessage, WorkflowMessage>("workflow-complete")
     {
+        // Role: Reads the final SQL status. Next: SqlTool.GetDocumentAsync in SqlTool.cs, then SqlTool.ReleaseLockAsync.
         public override async ValueTask<WorkflowMessage> HandleAsync(
             WorkflowMessage message,
             IWorkflowContext context,

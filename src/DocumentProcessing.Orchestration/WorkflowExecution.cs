@@ -22,6 +22,7 @@ public interface IWorkflowCheckpointGate
 
 public sealed class ScenarioCheckpointGate(ISqlTool sql, IOcrScenarioSelector scenarios, ILogger<ScenarioCheckpointGate> logger) : IWorkflowCheckpointGate
 {
+    // Role: Stops the workflow before compliance when the file name contains __interrupt. Next: ComplianceAgent.ExecuteAsync in ComplianceAgent.cs when it does not stop.
     public async Task OnCheckpointAsync(string checkpoint, Guid documentId, Guid correlationId, CancellationToken cancellationToken)
     {
         if (!string.Equals(checkpoint, WorkflowCheckpoints.BeforeCompliance, StringComparison.Ordinal))

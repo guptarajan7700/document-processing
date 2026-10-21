@@ -8,6 +8,7 @@ namespace DocumentProcessing.Tools.Ocr;
 
 public sealed class OcrTool(IOcrProvider provider, IOptions<WorkflowOptions> options, ILogger<OcrTool> logger) : IOcrTool
 {
+    // Role: Calls the provider and enforces the tool timeout. Next: MockOcrProvider.ExtractTextAsync in MockOcrProvider.cs.
     public async Task<OcrExtraction> ExtractTextAsync(OcrExtractionRequest request, CancellationToken cancellationToken)
     {
         var timeout = TimeSpan.FromMilliseconds(Math.Max(1, options.Value.ToolTimeoutMilliseconds));

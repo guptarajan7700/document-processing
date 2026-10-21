@@ -83,14 +83,17 @@ The API listens on `http://localhost:5280`. Swagger is at `http://localhost:5280
 
 Uploaded files are stored under the API content root in `App_Data/documents/{documentId}/`. That folder is gitignored.
 
-## Run the Angular app
+## Open the MVC UI
 
-```powershell
-cd document-processing-ui
-npm start
-```
+Start the API with the command above, or press F5 in Visual Studio on the `http` profile. The pages are served by the same process:
 
-The UI is at `http://localhost:4200`. CORS allows that origin. The API base URL is `document-processing-ui/src/environments/environment.ts`.
+- Dashboard: `http://localhost:5280/dashboard`
+- Upload: `http://localhost:5280/upload`
+- Documents: `http://localhost:5280/documents`
+- Rules: `http://localhost:5280/compliance-rules`
+- Swagger stays at `http://localhost:5280/swagger` for Postman-style API checks.
+
+The UI is ASP.NET Core MVC. It calls the same intake agent, workflow, and SQL tools as `/api/documents`. Node and Angular are not required.
 
 Screenshots of Swagger, the dashboard, and the SQL audit history are in `docs/screenshots`.
 
@@ -294,7 +297,7 @@ erDiagram
 - Sample length rules are not identity verification.
 - There is no durable external queue. Recovery polls SQL.
 - Compliance rule editing is not implemented. The rules page only displays SQL data.
-- Angular 19.2 is outside the current active-support table because Node.js 20.15.0 cannot run Angular 20+.
+- The UI is ASP.NET Core MVC in the API project. The old Angular app under `document-processing-ui` is not required.
 - OpenTelemetry writes traces to the console. Each agent activity carries `document.id`, `correlation.id`, `agent.name`, and `tool.name`. Duration is the activity duration. This is application tracing, not an Agent Framework feature.
 - Compliance rules use `IMemoryCache` for 60 seconds. The Agent Framework package has no public agent-hints API, so this cache is application code.
 - Docker Compose is in `docker-compose.yml`. Copy `.env.example` to `.env` and set `MSSQL_SA_PASSWORD` before `docker compose up --build`. The API is published on host port 5280. Do not commit `.env`.

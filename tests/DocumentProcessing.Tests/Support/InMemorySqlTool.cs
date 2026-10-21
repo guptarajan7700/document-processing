@@ -154,7 +154,7 @@ public sealed class InMemorySqlTool(IClock clock) : ISqlTool
                     item.DocumentId.ToString().Contains(filter.Search, StringComparison.OrdinalIgnoreCase));
             }
 
-            var all = query.OrderByDescending(item => item.UploadedOn).ToArray();
+            var all = query.OrderByDescending(item => item.UploadedOn).ThenBy(item => item.DocumentId).ToArray();
             var page = Math.Max(1, filter.Page);
             var pageSize = Math.Clamp(filter.PageSize, 1, 100);
             return Task.FromResult(new PagedResult<DocumentRecord>
@@ -264,6 +264,7 @@ public sealed class InMemorySqlTool(IClock clock) : ISqlTool
             IReadOnlyList<DocumentRecord> rows = _documents.Values
                 .Where(document => document.CurrentStatus is WorkflowStatus.Received or WorkflowStatus.OcrInProgress or WorkflowStatus.OcrSuccess or WorkflowStatus.ComplianceInProgress)
                 .Where(document => document.LockedUntil is null || document.LockedUntil < now)
+                .OrderBy(document => document.UploadedOn)
                 .Select(Copy)
                 .ToArray();
             return Task.FromResult(rows);

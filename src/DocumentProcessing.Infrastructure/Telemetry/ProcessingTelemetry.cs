@@ -8,6 +8,7 @@ public static class ProcessingTelemetry
 
     public static readonly ActivitySource Source = new(SourceName);
 
+    // Role: Starts an OpenTelemetry activity for one agent or tool. Next: the method that called Start continues.
     public static Activity? Start(string name, Guid documentId, Guid correlationId, string? agent = null, string? tool = null)
     {
         var activity = Source.StartActivity(name, ActivityKind.Internal);

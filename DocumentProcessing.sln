@@ -19,6 +19,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{A4786CAE
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocumentProcessing.Tests", "tests\DocumentProcessing.Tests\DocumentProcessing.Tests.csproj", "{77D87858-C37E-412E-9DB6-D9A5EAD8A630}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocumentProcessing.ImageOcr", "src\DocumentProcessing.ImageOcr\DocumentProcessing.ImageOcr.csproj", "{AE881F90-1FC7-4257-9FC9-9F009ACE91DF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,6 +54,10 @@ Global
 		{77D87858-C37E-412E-9DB6-D9A5EAD8A630}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{77D87858-C37E-412E-9DB6-D9A5EAD8A630}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{77D87858-C37E-412E-9DB6-D9A5EAD8A630}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE881F90-1FC7-4257-9FC9-9F009ACE91DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE881F90-1FC7-4257-9FC9-9F009ACE91DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE881F90-1FC7-4257-9FC9-9F009ACE91DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE881F90-1FC7-4257-9FC9-9F009ACE91DF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{8A4CD1E5-A70D-42E2-9117-102B28AEF4C2} = {4482E3AC-84CC-4A85-A22C-2D3B3DDC7A2A}
@@ -60,5 +66,6 @@ Global
 		{27B4B862-C2EA-4CE6-B2B0-C70CC0AD6075} = {4482E3AC-84CC-4A85-A22C-2D3B3DDC7A2A}
 		{7B1230C9-F6AE-4D59-B8AD-84CB19317FD1} = {4482E3AC-84CC-4A85-A22C-2D3B3DDC7A2A}
 		{77D87858-C37E-412E-9DB6-D9A5EAD8A630} = {A4786CAE-3A59-4840-83A2-6BE08941E099}
+		{AE881F90-1FC7-4257-9FC9-9F009ACE91DF} = {4482E3AC-84CC-4A85-A22C-2D3B3DDC7A2A}
 	EndGlobalSection
 EndGlobal

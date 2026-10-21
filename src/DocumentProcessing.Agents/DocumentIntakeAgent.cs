@@ -30,6 +30,7 @@ public sealed class DocumentIntakeAgent(
     IOptions<WorkflowOptions> options,
     ILogger<DocumentIntakeAgent> logger)
 {
+    // Role: Validates the upload, saves the file, and sets RECEIVED. Next: LocalDocumentFileStore.SaveAsync in LocalDocumentFileStore.cs.
     public async Task<Guid> AcceptAsync(DocumentIntakeRequest request, CancellationToken cancellationToken)
     {
         var correlationId = request.CorrelationId == Guid.Empty ? Guid.NewGuid() : request.CorrelationId;
@@ -88,6 +89,7 @@ public sealed class DocumentIntakeAgent(
         return documentId;
     }
 
+    // Role: Checks customer, type, file name, and Base64. Next: DocumentIntakeAgent.Decode in this file.
     private static void Validate(string customerId, string documentType, string fileName, string? base64)
     {
         var errors = new List<string>();
@@ -117,6 +119,7 @@ public sealed class DocumentIntakeAgent(
         }
     }
 
+    // Role: Turns Base64 into file bytes. Next: LocalDocumentFileStore.SaveAsync in LocalDocumentFileStore.cs.
     public static byte[] Decode(string base64)
     {
         var payload = base64.Trim();

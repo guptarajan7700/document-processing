@@ -1,4 +1,8 @@
 using DocumentProcessing.Agents;
+#if WINDOWS
+using DocumentProcessing.ImageOcr;
+#endif
+using DocumentProcessing.Tools.Ocr;
 using DocumentProcessing.Api.Hosting;
 using DocumentProcessing.Infrastructure;
 using DocumentProcessing.Infrastructure.Configuration;
@@ -9,9 +13,13 @@ using Microsoft.OpenApi.Models;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
+#if WINDOWS
+SubmittedFileTextExtractor.UseImageReader(WindowsImageReader.ReadAsync, WindowsImageReader.ProviderName);
+#endif
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllersWithViews();
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>

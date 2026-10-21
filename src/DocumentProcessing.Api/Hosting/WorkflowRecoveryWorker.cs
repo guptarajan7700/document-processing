@@ -16,11 +16,13 @@ public sealed class WorkflowWorkQueue
 
     public ChannelReader<Guid> Reader => _channel.Reader;
 
+    // Role: Puts the document id on the in-memory queue. Next: WorkflowRecoveryWorker.ExecuteOneAsync in this file.
     public void Enqueue(Guid documentId) => _channel.Writer.TryWrite(documentId);
 }
 
 public sealed class ChannelWorkflowHandoff(WorkflowWorkQueue queue) : IWorkflowHandoff
 {
+    // Role: Hands the new document to the background worker. Next: WorkflowWorkQueue.Enqueue in this file.
     public void Handoff(Guid documentId) => queue.Enqueue(documentId);
 }
 
@@ -30,6 +32,7 @@ public sealed class WorkflowRecoveryWorker(
     IOptions<WorkflowOptions> options,
     ILogger<WorkflowRecoveryWorker> logger) : BackgroundService
 {
+    // Role: Reads the queue and also polls SQL for unfinished documents. Next: ExecuteOneAsync in this file.
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!options.Value.EnableRecoveryHost)
@@ -70,6 +73,7 @@ public sealed class WorkflowRecoveryWorker(
         }
     }
 
+    // Role: Finds unlocked documents that are not finished. Next: WorkflowWorkQueue.Enqueue in this file.
     private async Task RecoverAsync(CancellationToken cancellationToken)
     {
         using var scope = scopes.CreateScope();
@@ -96,6 +100,7 @@ public sealed class WorkflowRecoveryWorker(
         }
     }
 
+    // Role: Starts one workflow on a background thread. Next: DocumentWorkflowService.ExecuteAsync in DocumentWorkflowRunner.cs.
     private async Task ExecuteOneAsync(Guid documentId, CancellationToken cancellationToken)
     {
         var correlationId = Guid.NewGuid();

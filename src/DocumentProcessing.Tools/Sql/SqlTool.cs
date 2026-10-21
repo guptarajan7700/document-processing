@@ -4,12 +4,14 @@ using DocumentProcessing.Infrastructure.Exceptions;
 using DocumentProcessing.Infrastructure.Models;
 using DocumentProcessing.Infrastructure.Workflow;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace DocumentProcessing.Tools.Sql;
 
-public sealed class SqlTool(ISqlConnectionFactory connections, ILogger<SqlTool> logger) : ISqlTool
+public sealed class SqlTool(DocumentQueryContext db, ISqlConnectionFactory connections, ILogger<SqlTool> logger) : ISqlTool
 {
+    // Role: Inserts the document and the first RECEIVED audit in one transaction. Next: dbo.sp_SaveDocument, then dbo.sp_UpdateWorkflowStatus.
     public async Task SaveDocumentMetadataAsync(DocumentRecord document, CancellationToken cancellationToken)
     {
         await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
@@ -42,12 +44,14 @@ public sealed class SqlTool(ISqlConnectionFactory connections, ILogger<SqlTool> 
         await transaction.CommitAsync(cancellationToken);
     }
 
+    // Role: Changes CurrentStatus and appends an audit row. Next: ExecuteStatusProcedureAsync in this file, which calls dbo.sp_UpdateWorkflowStatus.
     public async Task UpdateWorkflowStatusAsync(WorkflowStatusUpdate update, CancellationToken cancellationToken)
     {
         await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
         await ExecuteStatusProcedureAsync(connection, transaction: null, update, cancellationToken);
     }
 
+    // Role: Stores the extracted text. Next: dbo.sp_SaveOCRText, then OcrAgent sets OCR_Success.
     public async Task SaveExtractedTextAsync(OcrResultRecord result, CancellationToken cancellationToken)
     {
         await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
@@ -71,124 +75,92 @@ public sealed class SqlTool(ISqlConnectionFactory connections, ILogger<SqlTool> 
         }
     }
 
+    // Role: Reads one Documents row. Next: the caller continues with that status.
     public async Task<DocumentRecord?> GetDocumentAsync(Guid documentId, CancellationToken cancellationToken)
     {
-        await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
-        await using var command = new SqlCommand(
-            """
-            SELECT DocumentId, CustomerId, DocumentType, FileName, UploadedOn, CurrentStatus, StoragePath, LockToken, LockedUntil
-            FROM dbo.Documents
-            WHERE DocumentId = @DocumentId;
-            """,
-            connection);
-        command.Parameters.Add("@DocumentId", SqlDbType.UniqueIdentifier).Value = documentId;
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        if (!await reader.ReadAsync(cancellationToken))
-        {
-            return null;
-        }
-
-        return ReadDocument(reader);
+        var row = await db.Documents
+            .Where(document => document.DocumentId == documentId)
+            .FirstOrDefaultAsync(cancellationToken);
+        return row is null ? null : MapDocument(row);
     }
 
+    // Role: Reads the newest OCR row. Next: ComplianceTextValidator.Validate in ComplianceTextValidator.cs.
     public async Task<OcrResultRecord?> GetLatestOcrResultAsync(Guid documentId, CancellationToken cancellationToken)
     {
-        await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
-        await using var command = new SqlCommand(
-            """
-            SELECT TOP (1) Id, DocumentId, ExtractedText, ExtractedIdentifier, Provider, IsMock, AttemptNumber, CreatedOn
-            FROM dbo.DocumentOCRResults
-            WHERE DocumentId = @DocumentId
-            ORDER BY CreatedOn DESC, Id DESC;
-            """,
-            connection);
-        command.Parameters.Add("@DocumentId", SqlDbType.UniqueIdentifier).Value = documentId;
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        if (!await reader.ReadAsync(cancellationToken))
-        {
-            return null;
-        }
-
-        return new OcrResultRecord
-        {
-            Id = reader.GetInt64(0),
-            DocumentId = reader.GetGuid(1),
-            ExtractedText = reader.GetString(2),
-            ExtractedIdentifier = reader.IsDBNull(3) ? null : reader.GetString(3),
-            Provider = reader.GetString(4),
-            IsMock = reader.GetBoolean(5),
-            AttemptNumber = reader.GetInt32(6),
-            CreatedOn = reader.GetDateTime(7)
-        };
+        return await db.OcrResults
+            .Where(result => result.DocumentId == documentId)
+            .OrderByDescending(result => result.CreatedOn)
+            .ThenByDescending(result => result.Id)
+            .Select(result => new OcrResultRecord
+            {
+                Id = result.Id,
+                DocumentId = result.DocumentId,
+                ExtractedText = result.ExtractedText,
+                ExtractedIdentifier = result.ExtractedIdentifier,
+                Provider = result.Provider,
+                IsMock = result.IsMock,
+                AttemptNumber = result.AttemptNumber,
+                CreatedOn = result.CreatedOn
+            })
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
+    // Role: Reads the audit rows, oldest first. Next: the caller uses them for routing or the history page.
     public async Task<IReadOnlyList<WorkflowHistoryEntry>> GetHistoryAsync(Guid documentId, CancellationToken cancellationToken)
     {
-        await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
-        await using var command = new SqlCommand(
-            """
-            SELECT Id, DocumentId, Status, Message, Timestamp, AgentName, ToolName, AttemptNumber, CorrelationId, DurationMs, ExceptionType
-            FROM dbo.DocumentWorkflowStatus
-            WHERE DocumentId = @DocumentId
-            ORDER BY Timestamp ASC, Id ASC;
-            """,
-            connection);
-        command.Parameters.Add("@DocumentId", SqlDbType.UniqueIdentifier).Value = documentId;
-        return await ReadHistoryAsync(command, cancellationToken);
+        return await db.WorkflowStatuses
+            .Where(entry => entry.DocumentId == documentId)
+            .OrderBy(entry => entry.Timestamp)
+            .ThenBy(entry => entry.Id)
+            .Select(entry => new WorkflowHistoryEntry
+            {
+                Id = entry.Id,
+                DocumentId = entry.DocumentId,
+                Status = entry.Status,
+                Message = entry.Message,
+                Timestamp = entry.Timestamp,
+                AgentName = entry.AgentName,
+                ToolName = entry.ToolName,
+                AttemptNumber = entry.AttemptNumber,
+                CorrelationId = entry.CorrelationId,
+                DurationMs = entry.DurationMs,
+                ExceptionType = entry.ExceptionType
+            })
+            .ToListAsync(cancellationToken);
     }
 
+    // Role: Returns a filtered page of documents plus the latest audit message. Next: DocumentsController.List returns the JSON.
     public async Task<PagedResult<DocumentRecord>> ListDocumentsAsync(DocumentListFilter filter, CancellationToken cancellationToken)
     {
         var page = Math.Max(1, filter.Page);
         var pageSize = Math.Clamp(filter.PageSize, 1, 100);
-        var search = string.IsNullOrWhiteSpace(filter.Search) ? null : $"%{EscapeLike(filter.Search.Trim())}%";
+        var query = ApplyListFilter(db.Documents, filter);
 
-        await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
-        await using var count = new SqlCommand(
-            """
-            SELECT COUNT(*)
-            FROM dbo.Documents
-            WHERE (@Status IS NULL OR CurrentStatus = @Status)
-              AND (@DocumentType IS NULL OR DocumentType = @DocumentType)
-              AND (@Search IS NULL OR CustomerId LIKE @Search OR FileName LIKE @Search OR CONVERT(nvarchar(36), DocumentId) LIKE @Search);
-            """,
-            connection);
-        AddListParameters(count, filter, search);
-        var total = (int)(await count.ExecuteScalarAsync(cancellationToken) ?? 0);
-
-        await using var command = new SqlCommand(
-            """
-            SELECT d.DocumentId, d.CustomerId, d.DocumentType, d.FileName, d.UploadedOn, d.CurrentStatus, d.StoragePath, d.LockToken, d.LockedUntil, h.Message
-            FROM dbo.Documents AS d
-            OUTER APPLY (
-                SELECT TOP (1) Message
-                FROM dbo.DocumentWorkflowStatus
-                WHERE DocumentId = d.DocumentId
-                ORDER BY Timestamp DESC, Id DESC
-            ) AS h
-            WHERE (@Status IS NULL OR d.CurrentStatus = @Status)
-              AND (@DocumentType IS NULL OR d.DocumentType = @DocumentType)
-              AND (@Search IS NULL OR d.CustomerId LIKE @Search OR d.FileName LIKE @Search OR CONVERT(nvarchar(36), d.DocumentId) LIKE @Search)
-            ORDER BY d.UploadedOn DESC, d.DocumentId
-            OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
-            """,
-            connection);
-        AddListParameters(command, filter, search);
-        command.Parameters.Add("@Offset", SqlDbType.Int).Value = (page - 1) * pageSize;
-        command.Parameters.Add("@PageSize", SqlDbType.Int).Value = pageSize;
-
-        var items = new List<DocumentRecord>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            var document = ReadDocument(reader);
-            if (reader.FieldCount > 9 && !reader.IsDBNull(9))
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(document => document.UploadedOn)
+            .ThenBy(document => document.DocumentId)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(document => new DocumentRecord
             {
-                document.LatestMessage = reader.GetString(9);
-            }
-
-            items.Add(document);
-        }
+                DocumentId = document.DocumentId,
+                CustomerId = document.CustomerId,
+                DocumentType = document.DocumentType,
+                FileName = document.FileName,
+                UploadedOn = document.UploadedOn,
+                CurrentStatus = document.CurrentStatus,
+                StoragePath = document.StoragePath,
+                LockToken = document.LockToken,
+                LockedUntil = document.LockedUntil,
+                LatestMessage = db.WorkflowStatuses
+                    .Where(entry => entry.DocumentId == document.DocumentId)
+                    .OrderByDescending(entry => entry.Timestamp)
+                    .ThenByDescending(entry => entry.Id)
+                    .Select(entry => entry.Message)
+                    .FirstOrDefault()
+            })
+            .ToListAsync(cancellationToken);
 
         return new PagedResult<DocumentRecord>
         {
@@ -199,55 +171,59 @@ public sealed class SqlTool(ISqlConnectionFactory connections, ILogger<SqlTool> 
         };
     }
 
+    // Role: Counts documents by status for the dashboard. Next: DocumentsController.Summary returns the JSON.
     public async Task<DocumentStatusCounts> GetStatusCountsAsync(CancellationToken cancellationToken)
     {
-        await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
-        await using var command = new SqlCommand(
-            """
-            SELECT CurrentStatus, COUNT(*) AS Total
-            FROM dbo.Documents
-            GROUP BY CurrentStatus;
-            """,
-            connection);
+        var groups = await db.Documents
+            .GroupBy(document => document.CurrentStatus)
+            .Select(group => new { Status = group.Key, Total = group.Count() })
+            .ToListAsync(cancellationToken);
 
         var counts = new DocumentStatusCounts();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        foreach (var group in groups)
         {
-            var status = reader.GetString(0);
-            var total = reader.GetInt32(1);
-            counts.Total += total;
-            switch (status)
+            counts.Total += group.Total;
+            switch (group.Status)
             {
-                case WorkflowStatus.Received: counts.Received = total; break;
-                case WorkflowStatus.OcrInProgress: counts.OcrInProgress = total; break;
-                case WorkflowStatus.OcrFailed: counts.OcrFailed = total; break;
-                case WorkflowStatus.OcrSuccess: counts.OcrSuccess = total; break;
-                case WorkflowStatus.ComplianceInProgress: counts.ComplianceInProgress = total; break;
-                case WorkflowStatus.Approved: counts.Approved = total; break;
-                case WorkflowStatus.Rejected: counts.Rejected = total; break;
+                case WorkflowStatus.Received: counts.Received = group.Total; break;
+                case WorkflowStatus.OcrInProgress: counts.OcrInProgress = group.Total; break;
+                case WorkflowStatus.OcrFailed: counts.OcrFailed = group.Total; break;
+                case WorkflowStatus.OcrSuccess: counts.OcrSuccess = group.Total; break;
+                case WorkflowStatus.ComplianceInProgress: counts.ComplianceInProgress = group.Total; break;
+                case WorkflowStatus.Approved: counts.Approved = group.Total; break;
+                case WorkflowStatus.Rejected: counts.Rejected = group.Total; break;
             }
         }
 
         return counts;
     }
 
+    // Role: Returns the newest audit rows across all documents. Next: DocumentsController.Activity returns the JSON.
     public async Task<IReadOnlyList<WorkflowHistoryEntry>> GetRecentActivityAsync(int take, CancellationToken cancellationToken)
     {
         take = Math.Clamp(take, 1, 50);
-        await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
-        await using var command = new SqlCommand(
-            """
-            SELECT TOP (@Take) Id, DocumentId, Status, Message, Timestamp, AgentName, ToolName, AttemptNumber, CorrelationId, DurationMs, ExceptionType
-            FROM dbo.DocumentWorkflowStatus
-            ORDER BY Timestamp DESC, Id DESC;
-            """,
-            connection);
-        command.Parameters.Add("@Take", SqlDbType.Int).Value = take;
-        var rows = await ReadHistoryAsync(command, cancellationToken);
-        return rows;
+        return await db.WorkflowStatuses
+            .OrderByDescending(entry => entry.Timestamp)
+            .ThenByDescending(entry => entry.Id)
+            .Take(take)
+            .Select(entry => new WorkflowHistoryEntry
+            {
+                Id = entry.Id,
+                DocumentId = entry.DocumentId,
+                Status = entry.Status,
+                Message = entry.Message,
+                Timestamp = entry.Timestamp,
+                AgentName = entry.AgentName,
+                ToolName = entry.ToolName,
+                AttemptNumber = entry.AttemptNumber,
+                CorrelationId = entry.CorrelationId,
+                DurationMs = entry.DurationMs,
+                ExceptionType = entry.ExceptionType
+            })
+            .ToListAsync(cancellationToken);
     }
 
+    // Role: Reads compliance rules. Next: dbo.sp_GetComplianceRules.
     public async Task<IReadOnlyList<ComplianceRuleRecord>> GetComplianceRulesAsync(string? documentType, bool activeOnly, CancellationToken cancellationToken)
     {
         await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
@@ -277,6 +253,7 @@ public sealed class SqlTool(ISqlConnectionFactory connections, ILogger<SqlTool> 
         return rules;
     }
 
+    // Role: Locks the document so only one worker processes it. This stays SQL because UPDLOCK cannot be expressed in LINQ. Next: DocumentWorkflowService.RunFrameworkWorkflowAsync in DocumentWorkflowRunner.cs.
     public async Task<WorkflowLockResult> TryAcquireLockAsync(Guid documentId, Guid lockToken, TimeSpan lease, CancellationToken cancellationToken)
     {
         await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
@@ -341,6 +318,7 @@ public sealed class SqlTool(ISqlConnectionFactory connections, ILogger<SqlTool> 
         return new WorkflowLockResult { State = WorkflowLockState.Acquired, CurrentStatus = status };
     }
 
+    // Role: Clears LockToken after the workflow finishes. Next: none. This is the end of processing.
     public async Task ReleaseLockAsync(Guid documentId, Guid lockToken, CancellationToken cancellationToken)
     {
         await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
@@ -356,29 +334,22 @@ public sealed class SqlTool(ISqlConnectionFactory connections, ILogger<SqlTool> 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    // Role: Finds unfinished documents whose lock has expired. Next: WorkflowRecoveryWorker.ExecuteOneAsync in WorkflowRecoveryWorker.cs.
     public async Task<IReadOnlyList<DocumentRecord>> GetRecoverableDocumentsAsync(CancellationToken cancellationToken)
     {
-        await using var connection = await connections.CreateOpenConnectionAsync(cancellationToken);
-        await using var command = new SqlCommand(
-            """
-            SELECT DocumentId, CustomerId, DocumentType, FileName, UploadedOn, CurrentStatus, StoragePath, LockToken, LockedUntil
-            FROM dbo.Documents
-            WHERE CurrentStatus IN (N'RECEIVED', N'OCR_IN_PROGRESS', N'OCR_Success', N'COMPLIANCE_CHECK_IN_PROGRESS')
-              AND (LockedUntil IS NULL OR LockedUntil < SYSUTCDATETIME())
-            ORDER BY UploadedOn ASC;
-            """,
-            connection);
-
-        var items = new List<DocumentRecord>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            items.Add(ReadDocument(reader));
-        }
-
-        return items;
+        var now = DateTime.UtcNow;
+        var rows = await db.Documents
+            .Where(document => document.CurrentStatus == WorkflowStatus.Received
+                || document.CurrentStatus == WorkflowStatus.OcrInProgress
+                || document.CurrentStatus == WorkflowStatus.OcrSuccess
+                || document.CurrentStatus == WorkflowStatus.ComplianceInProgress)
+            .Where(document => document.LockedUntil == null || document.LockedUntil < now)
+            .OrderBy(document => document.UploadedOn)
+            .ToListAsync(cancellationToken);
+        return rows.Select(MapDocument).ToArray();
     }
 
+    // Role: Calls dbo.sp_UpdateWorkflowStatus, which checks fn_WorkflowTransitionAllowed. Next: the SQL procedure commits the status and audit row.
     private async Task ExecuteStatusProcedureAsync(
         SqlConnection connection,
         SqlTransaction? transaction,
@@ -425,49 +396,41 @@ public sealed class SqlTool(ISqlConnectionFactory connections, ILogger<SqlTool> 
             update.ExceptionType);
     }
 
-    private static void AddListParameters(SqlCommand command, DocumentListFilter filter, string? search)
+    private static IQueryable<DocumentRow> ApplyListFilter(IQueryable<DocumentRow> query, DocumentListFilter filter)
     {
-        command.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = (object?)filter.Status ?? DBNull.Value;
-        command.Parameters.Add("@DocumentType", SqlDbType.NVarChar, 20).Value = (object?)filter.DocumentType ?? DBNull.Value;
-        command.Parameters.Add("@Search", SqlDbType.NVarChar, 300).Value = (object?)search ?? DBNull.Value;
-    }
-
-    private static async Task<IReadOnlyList<WorkflowHistoryEntry>> ReadHistoryAsync(SqlCommand command, CancellationToken cancellationToken)
-    {
-        var rows = new List<WorkflowHistoryEntry>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        if (!string.IsNullOrWhiteSpace(filter.Status))
         {
-            rows.Add(new WorkflowHistoryEntry
-            {
-                Id = reader.GetInt64(0),
-                DocumentId = reader.GetGuid(1),
-                Status = reader.GetString(2),
-                Message = reader.GetString(3),
-                Timestamp = reader.GetDateTime(4),
-                AgentName = reader.IsDBNull(5) ? null : reader.GetString(5),
-                ToolName = reader.IsDBNull(6) ? null : reader.GetString(6),
-                AttemptNumber = reader.IsDBNull(7) ? null : reader.GetInt32(7),
-                CorrelationId = reader.IsDBNull(8) ? null : reader.GetGuid(8),
-                DurationMs = reader.IsDBNull(9) ? null : reader.GetInt32(9),
-                ExceptionType = reader.IsDBNull(10) ? null : reader.GetString(10)
-            });
+            query = query.Where(document => document.CurrentStatus == filter.Status);
         }
 
-        return rows;
+        if (!string.IsNullOrWhiteSpace(filter.DocumentType))
+        {
+            query = query.Where(document => document.DocumentType == filter.DocumentType);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var search = $"%{EscapeLike(filter.Search.Trim())}%";
+            query = query.Where(document =>
+                EF.Functions.Like(document.CustomerId, search)
+                || EF.Functions.Like(document.FileName, search)
+                || EF.Functions.Like(document.DocumentId.ToString(), search));
+        }
+
+        return query;
     }
 
-    private static DocumentRecord ReadDocument(SqlDataReader reader) => new()
+    private static DocumentRecord MapDocument(DocumentRow row) => new()
     {
-        DocumentId = reader.GetGuid(0),
-        CustomerId = reader.GetString(1),
-        DocumentType = reader.GetString(2),
-        FileName = reader.GetString(3),
-        UploadedOn = reader.GetDateTime(4),
-        CurrentStatus = reader.GetString(5),
-        StoragePath = reader.IsDBNull(6) ? null : reader.GetString(6),
-        LockToken = reader.IsDBNull(7) ? null : reader.GetGuid(7),
-        LockedUntil = reader.IsDBNull(8) ? null : reader.GetDateTime(8)
+        DocumentId = row.DocumentId,
+        CustomerId = row.CustomerId,
+        DocumentType = row.DocumentType,
+        FileName = row.FileName,
+        UploadedOn = row.UploadedOn,
+        CurrentStatus = row.CurrentStatus,
+        StoragePath = row.StoragePath,
+        LockToken = row.LockToken,
+        LockedUntil = row.LockedUntil
     };
 
     private static string EscapeLike(string value) =>

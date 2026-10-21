@@ -14,6 +14,7 @@ public sealed class CoordinatorAgent(ISqlTool sql, ILogger<CoordinatorAgent> log
     public const string RouteCompliance = "compliance";
     public const string RouteDone = "done";
 
+    // Role: Reads the SQL status and chooses virus-scan, ocr, compliance, or done. Next: RouteReceivedAsync in this file when status is RECEIVED.
     public async Task<string> DecideNextRouteAsync(Guid documentId, Guid correlationId, CancellationToken cancellationToken)
     {
         var document = await sql.GetDocumentAsync(documentId, cancellationToken)
@@ -39,6 +40,7 @@ public sealed class CoordinatorAgent(ISqlTool sql, ILogger<CoordinatorAgent> log
         return route;
     }
 
+    // Role: Sends a new document to virus scan, or skips it when the scan already passed. Next: VirusScanAgent.ExecuteAsync in VirusScanAgent.cs.
     private async Task<string> RouteReceivedAsync(Guid documentId, CancellationToken cancellationToken)
     {
         var history = await sql.GetHistoryAsync(documentId, cancellationToken);
@@ -47,6 +49,7 @@ public sealed class CoordinatorAgent(ISqlTool sql, ILogger<CoordinatorAgent> log
         return alreadyPassed ? RouteOcr : RouteVirusScan;
     }
 
+    // Role: Resumes OCR, or skips it when text is already saved. Next: OcrAgent.ExecuteAsync or ComplianceAgent.ExecuteAsync.
     private async Task<string> RecoverOcrAsync(DocumentRecord document, Guid correlationId, CancellationToken cancellationToken)
     {
         var ocr = await sql.GetLatestOcrResultAsync(document.DocumentId, cancellationToken);

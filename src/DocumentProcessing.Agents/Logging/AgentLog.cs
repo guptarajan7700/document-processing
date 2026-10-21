@@ -4,6 +4,7 @@ namespace DocumentProcessing.Agents.Logging;
 
 public static class AgentLog
 {
+    // Role: Adds correlation id, document id, and agent name to the log scope. Next: the agent method that called Begin continues.
     public static IDisposable Begin(
         ILogger logger,
         Guid correlationId,

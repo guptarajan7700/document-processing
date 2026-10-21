@@ -12,12 +12,11 @@ public interface IVirusScanTool
 }
 
 /// <summary>
-/// Optional intake check. The assessment mentions VirusScanAgent beside intake, but the mandatory
-/// agent list does not define that agent. This mock is a tool, not a fourth workflow agent,
-/// and it is not a real antivirus engine.
+/// Mock filename check used by VirusScanAgent. It is not a real antivirus engine.
 /// </summary>
 public sealed class MockVirusScanTool : IVirusScanTool
 {
+    // Role: Rejects a file whose name contains VIRUS. Next: SqlTool.UpdateWorkflowStatusAsync in SqlTool.cs.
     public Task<VirusScanResult> ScanAsync(string fileName, byte[] content, CancellationToken cancellationToken)
     {
         if (fileName.Contains("VIRUS", StringComparison.OrdinalIgnoreCase))

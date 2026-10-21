@@ -8,6 +8,7 @@ public sealed class CorrelationMiddleware(RequestDelegate next, ILogger<Correlat
     public const string HeaderName = "X-Correlation-Id";
     public const string ItemKey = "CorrelationId";
 
+    // Role: Assigns one correlation id for this HTTP request. Next: DocumentsController.Upload in DocumentsController.cs.
     public async Task Invoke(HttpContext context)
     {
         var header = context.Request.Headers[HeaderName].FirstOrDefault();
@@ -23,6 +24,7 @@ public sealed class CorrelationMiddleware(RequestDelegate next, ILogger<Correlat
 
 public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
 {
+    // Role: Turns exceptions into HTTP 400, 404, or 409. Next: CorrelationMiddleware.Invoke in this file.
     public async Task Invoke(HttpContext context)
     {
         try

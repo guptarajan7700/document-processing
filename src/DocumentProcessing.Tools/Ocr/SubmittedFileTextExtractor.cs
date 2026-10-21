@@ -2,6 +2,8 @@ using System.Text;
 
 namespace DocumentProcessing.Tools.Ocr;
 
+public readonly record struct SubmittedFileText(string Text, string? ImageProvider);
+
 public static class SubmittedFileTextExtractor
 {
     public const string ImageUnreadMessage =
@@ -10,26 +12,42 @@ public static class SubmittedFileTextExtractor
     public const string BinaryUnreadMessage =
         "The submitted file could not be decoded as text, so the identifier could not be checked.";
 
-    public static string Read(string fileName, byte[] content)
+    private static Func<byte[], Task<string?>>? _imageReader;
+    private static string? _imageProvider;
+
+    // Role: Connects Windows OCR for image uploads. Next: ReadAsync in this file uses it when the file is an image.
+    public static void UseImageReader(Func<byte[], Task<string?>> reader, string providerName)
+    {
+        _imageReader = reader;
+        _imageProvider = providerName;
+    }
+
+    // Role: Decodes a text file, or reads an image with Windows OCR when that engine is available. Next: DocumentIdentifierExtractor.Extract in DocumentIdentifierExtractor.cs.
+    public static async Task<SubmittedFileText> ReadAsync(string fileName, byte[] content, CancellationToken cancellationToken)
     {
         if (content.Length == 0)
         {
-            return string.Empty;
+            return new SubmittedFileText(string.Empty, null);
         }
 
         if (IsImage(fileName, content))
         {
-            return ImageUnreadMessage;
+            cancellationToken.ThrowIfCancellationRequested();
+            var text = _imageReader is null ? null : await _imageReader(content);
+            return string.IsNullOrWhiteSpace(text)
+                ? new SubmittedFileText(ImageUnreadMessage, null)
+                : new SubmittedFileText(text.Trim(), _imageProvider);
         }
 
         if (!LooksLikeText(fileName, content))
         {
-            return BinaryUnreadMessage;
+            return new SubmittedFileText(BinaryUnreadMessage, null);
         }
 
-        return Decode(content).Trim();
+        return new SubmittedFileText(Decode(content).Trim(), null);
     }
 
+    // Role: Detects an image by extension or file header. Next: Read returns the image-unread message.
     private static bool IsImage(string fileName, byte[] content)
     {
         var extension = Path.GetExtension(fileName);
@@ -52,6 +70,7 @@ public static class SubmittedFileTextExtractor
             || (content[0] == 0x42 && content[1] == 0x4D));
     }
 
+    // Role: Accepts a text extension or mostly printable bytes. Next: Decode in this file.
     private static bool LooksLikeText(string fileName, byte[] content)
     {
         var extension = Path.GetExtension(fileName);
@@ -84,6 +103,7 @@ public static class SubmittedFileTextExtractor
         return printable >= sampleLength * 0.85;
     }
 
+    // Role: Decodes UTF-8 or UTF-16 text. Next: DocumentIdentifierExtractor.Extract in DocumentIdentifierExtractor.cs.
     private static string Decode(byte[] content)
     {
         if (content.Length >= 3 && content[0] == 0xEF && content[1] == 0xBB && content[2] == 0xBF)

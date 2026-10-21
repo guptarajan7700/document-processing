@@ -1,0 +1,46 @@
+@model HistoryPage
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Audit</p>
+        <h2>Workflow history</h2>
+        <p>@Model.DocumentId</p>
+    </div>
+    <div class="actions">
+        <a class="btn secondary" href="/documents/@Model.DocumentId">Back to details</a>
+        <a class="btn secondary" href="/documents/@Model.DocumentId/history">Refresh</a>
+    </div>
+</div>
+<section class="panel">
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <div class="error-panel"><p>@Model.Error</p></div>
+    }
+    else if (Model.Items.Count == 0)
+    {
+        <p class="empty">No workflow events are recorded for this document.</p>
+    }
+    else
+    {
+        <ol class="timeline">
+            @foreach (var item in Model.Items)
+            {
+                <li>
+                    <div class="when">@item.Timestamp.ToLocalTime().ToString("dd MMM yyyy, HH:mm:ss")</div>
+                    <span class="badge @UiText.BadgeClass(item.Status)">@UiText.StatusLabel(item.Status)</span>
+                    <p>@item.Message</p>
+                    <p class="help">
+                        @(item.AgentName ?? "System")
+                        @if (!string.IsNullOrWhiteSpace(item.ToolName))
+                        {<text> · @item.ToolName</text>}
+                        @if (item.AttemptNumber is not null)
+                        {<text> · attempt @item.AttemptNumber</text>}
+                        @if (!string.IsNullOrWhiteSpace(item.ExceptionType))
+                        {<text> · @item.ExceptionType</text>}
+                        @if (item.DurationMs is not null)
+                        {<text> · @item.DurationMs ms</text>}
+                    </p>
+                </li>
+            }
+        </ol>
+    }
+</section>

@@ -10,6 +10,7 @@ public sealed class ComplianceRulesController(IComplianceRulesTool rules) : Cont
 {
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<ComplianceRuleResponse>), StatusCodes.Status200OK)]
+    // Role: Returns the compliance rules for the rules page. Next: ComplianceRulesTool.GetRulesAsync in ComplianceRulesTool.cs.
     public async Task<ActionResult<IReadOnlyList<ComplianceRuleResponse>>> Get([FromQuery] string? documentType, CancellationToken cancellationToken)
     {
         var rows = await rules.GetRulesAsync(string.IsNullOrWhiteSpace(documentType) ? null : documentType.Trim().ToUpperInvariant(), cancellationToken);
