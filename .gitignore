@@ -11,3 +11,4 @@ document-processing-ui/.angular/
 *.user
 *.suo
 .env
+~$*
