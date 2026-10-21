@@ -2,7 +2,7 @@
 
 Enterprise-style workflow for compliance documents (PAN, AADHAR, LOA). The API accepts a document, stores it, and a coordinator routes it through OCR and sample compliance checks. State, audit history, and recovery live in SQL Server.
 
-The OCR step reads text from the submitted file and can simulate timeouts and failures. It does not optically read an image. A text file must contain the PAN, AADHAR, or LOA value. If that value is missing or fails a SQL length rule, the document is rejected and the remarks explain why.
+The OCR step reads text from the submitted file and can simulate timeouts and failures. On Windows, an image is read with the Windows OCR engine. A text file must contain the PAN, AADHAR, or LOA value. If that value is missing or fails a SQL length rule, the document is rejected and the remarks explain why.
 
 Passing a length rule does **not** establish that a document is authentic.
 
@@ -11,12 +11,8 @@ Passing a length rule does **not** establish that a document is authentic.
 | Tool | Version used |
 | --- | --- |
 | .NET SDK | 8.0.100 |
-| Node.js | 20.15.0 |
-| npm | 10.7.0 |
 | SQL Server LocalDB | 2019 (`MSSQLLocalDB`) |
 | sqlcmd | ODBC 17 tools |
-
-Angular **19.2.x** is the newest release that runs on Node.js 20.15.0. Official compatibility (https://angular.dev/reference/versions) requires Node.js `^20.19.0` or newer for Angular 20, 21, and 22. Those currently supported majors cannot be installed on this Node version, so the UI uses Angular 19.2, which lists Node `^18.19.1 || ^20.11.1 || ^22.0.0`.
 
 Microsoft Agent Framework package `Microsoft.Agents.AI.Workflows` **1.25.0** targets `net8.0`. No prerelease packages are used.
 
@@ -39,10 +35,6 @@ Microsoft Agent Framework package `Microsoft.Agents.AI.Workflows` **1.25.0** tar
 Entity Framework Core is not used. Mandatory writes go through stored procedures.
 
 `Microsoft.Agents.AI.OpenAI` is **not** installed. Basic validation does not need a model or an API key.
-
-### npm (Angular 19.2)
-
-`@angular/core`, `common`, `compiler`, `forms`, `platform-browser`, `router` `^19.2.0`; `rxjs` `~7.8.0`; `zone.js` `~0.15.0`. Dev: Angular CLI `^19.2.27`, TypeScript `~5.7.2`, Karma, Jasmine. Styling is custom CSS. No paid UI library.
 
 ## Database setup
 
@@ -93,7 +85,7 @@ Start the API with the command above, or press F5 in Visual Studio on the `http`
 - Rules: `http://localhost:5280/compliance-rules`
 - Swagger stays at `http://localhost:5280/swagger` for Postman-style API checks.
 
-The UI is ASP.NET Core MVC. It calls the same intake agent, workflow, and SQL tools as `/api/documents`. Node and Angular are not required.
+The UI is ASP.NET Core MVC. It calls the same intake agent, workflow, and SQL tools as `/api/documents`.
 
 Screenshots of Swagger, the dashboard, and the SQL audit history are in `docs/screenshots`.
 
@@ -247,8 +239,6 @@ An `__interrupt` file stops after `OCR_Success`. Replay sees the interrupt audit
 
 ```powershell
 dotnet test tests/DocumentProcessing.Tests/DocumentProcessing.Tests.csproj
-cd document-processing-ui
-npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
 Backend tests cover transitions, each agent path, rule failure, missing documents, timeout, retry success, permanent failure, compensation, audit history, routing, replay, and duplicate locks. `ApiIntegrationTests` uses LocalDB and is included in `dotnet test`.
@@ -293,11 +283,11 @@ erDiagram
 
 ## Known limitations
 
-- Mock OCR is not optical character recognition. Swap `IOcrProvider` for a local engine later.
+- Text files are decoded directly. On Windows, images are read with `Windows.Media.Ocr`. Other systems still need a text file.
 - Sample length rules are not identity verification.
 - There is no durable external queue. Recovery polls SQL.
 - Compliance rule editing is not implemented. The rules page only displays SQL data.
-- The UI is ASP.NET Core MVC in the API project. The old Angular app under `document-processing-ui` is not required.
+- The UI is ASP.NET Core MVC in the API project.
 - OpenTelemetry writes traces to the console. Each agent activity carries `document.id`, `correlation.id`, `agent.name`, and `tool.name`. Duration is the activity duration. This is application tracing, not an Agent Framework feature.
 - Compliance rules use `IMemoryCache` for 60 seconds. The Agent Framework package has no public agent-hints API, so this cache is application code.
 - Docker Compose is in `docker-compose.yml`. Copy `.env.example` to `.env` and set `MSSQL_SA_PASSWORD` before `docker compose up --build`. The API is published on host port 5280. Do not commit `.env`.
