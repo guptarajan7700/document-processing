@@ -44,6 +44,10 @@ public class DocumentIdentifierExtractorTests
         Assert.Equal("ABCDE1234F", DocumentIdentifierExtractor.Extract(DocumentTypes.Pan, MockOcrProvider.BuildSampleText(DocumentTypes.Pan)));
         Assert.Equal("123456789012", DocumentIdentifierExtractor.Extract(DocumentTypes.Aadhar, MockOcrProvider.BuildSampleText(DocumentTypes.Aadhar)));
         Assert.Equal("LOA-1001", DocumentIdentifierExtractor.Extract(DocumentTypes.Loa, MockOcrProvider.BuildSampleText(DocumentTypes.Loa)));
+        Assert.Equal("ABCDE1234F", DocumentIdentifierExtractor.Extract(DocumentTypes.Pan, "PAN ABCDE 1234 F"));
+        Assert.Equal("123456789012", DocumentIdentifierExtractor.Extract(DocumentTypes.Aadhar, "AADHAR 1234 5678 9012"));
+        Assert.Equal("LOA-12", DocumentIdentifierExtractor.Extract(DocumentTypes.Loa, "REFERENCE LOA-12"));
+        Assert.Null(DocumentIdentifierExtractor.Extract(DocumentTypes.Loa, "REFERENCE LOA-1"));
     }
 
     [Fact]

@@ -113,7 +113,10 @@ public sealed class InMemorySqlTool(IClock clock) : ISqlTool
     {
         lock (_gate)
         {
-            var latest = _ocr.Where(item => item.DocumentId == documentId).OrderByDescending(item => item.Id).FirstOrDefault();
+            var latest = _ocr.Where(item => item.DocumentId == documentId)
+                .OrderByDescending(item => item.CreatedOn)
+                .ThenByDescending(item => item.Id)
+                .FirstOrDefault();
             return Task.FromResult(latest);
         }
     }

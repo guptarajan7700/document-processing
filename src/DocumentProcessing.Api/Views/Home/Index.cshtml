@@ -1,4 +1,4 @@
-@model DashboardPage
+@model DashboardViewModel
 <div class="page-head">
     <div>
         <p class="eyebrow">Today</p>
@@ -48,7 +48,7 @@ else
                 {
                     <li>
                         <div class="when">@item.Timestamp.ToLocalTime().ToString("dd MMM yyyy, HH:mm") · @(item.AgentName ?? "System")</div>
-                        <div><span class="badge @UiText.BadgeClass(item.Status)">@UiText.StatusLabel(item.Status)</span></div>
+                        <div><span class="badge @StatusText.BadgeClass(item.Status)">@StatusText.StatusLabel(item.Status)</span></div>
                         <p>@item.Message</p>
                         <a href="/documents/@item.DocumentId/history">View history</a>
                     </li>

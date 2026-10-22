@@ -1,4 +1,4 @@
-@model DetailsPage
+@model DocumentDetailsViewModel
 @section Head {
     @if (Model.Refresh)
     {
@@ -40,6 +40,13 @@ else
     {
         <p class="working"><span class="spinner"></span> Checking the submitted file. This page refreshes until the workflow finishes.</p>
     }
+    @if (!string.IsNullOrWhiteSpace(Model.PausedMessage))
+    {
+        <div class="error-panel" style="margin-bottom: 16px;">
+            <strong>Workflow paused</strong>
+            <p>@Model.PausedMessage Use Resume to run the compliance check again.</p>
+        </div>
+    }
     <section class="cards">
         <article class="card"><div class="label">Customer</div><div class="value" style="font-size:1.35rem">@document.CustomerId</div></article>
         <article class="card"><div class="label">Type</div><div class="value" style="font-size:1.35rem">@document.DocumentType</div></article>
@@ -47,7 +54,7 @@ else
         <article class="card"><div class="label">Uploaded</div><div class="value" style="font-size:1.15rem">@document.UploadedOn.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</div></article>
     </section>
     <section class="panel stack section-gap">
-        <div>Current status <span class="badge @UiText.BadgeClass(document.CurrentStatus)">@UiText.StatusLabel(document.CurrentStatus)</span></div>
+        <div>Current status <span class="badge @StatusText.BadgeClass(document.CurrentStatus)">@StatusText.StatusLabel(document.CurrentStatus)</span></div>
         @if (document.CurrentStatus is "REJECTED" or "OCR_FAILED")
         {
             <div class="error-panel">
@@ -62,7 +69,7 @@ else
         }
         else
         {
-            <div class="notice">@DetailsPage.OcrNotice Provider: @Model.Ocr.Provider. Attempt @Model.Ocr.AttemptNumber.</div>
+            <div class="notice">@DocumentDetailsViewModel.OcrNotice Provider: @Model.Ocr.Provider. Attempt @Model.Ocr.AttemptNumber.</div>
             <div class="identifier">@(string.IsNullOrWhiteSpace(Model.Ocr.ExtractedIdentifier) ? "Identifier not found" : Model.Ocr.ExtractedIdentifier)</div>
             <pre class="extract">@Model.Ocr.ExtractedText</pre>
         }

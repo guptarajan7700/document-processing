@@ -1,28 +1,24 @@
-using DocumentProcessing.Api.Contracts;
+using DocumentProcessing.Api.Models;
 using DocumentProcessing.Tools.Compliance;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DocumentProcessing.Api.Controllers;
 
-[ApiController]
-[Route("api/compliance-rules")]
-public sealed class ComplianceRulesController(IComplianceRulesTool rules) : ControllerBase
+public sealed class ComplianceRulesController(IComplianceRulesTool rules, ILogger<ComplianceRulesController> logger) : Controller
 {
-    [HttpGet]
-    [ProducesResponseType(typeof(IReadOnlyList<ComplianceRuleResponse>), StatusCodes.Status200OK)]
-    // Role: Returns the compliance rules for the rules page. Next: ComplianceRulesTool.GetRulesAsync in ComplianceRulesTool.cs.
-    public async Task<ActionResult<IReadOnlyList<ComplianceRuleResponse>>> Get([FromQuery] string? documentType, CancellationToken cancellationToken)
+    // Role: Shows the SQL compliance rules. Next: ComplianceRulesTool.GetRulesAsync in ComplianceRulesTool.cs.
+    [HttpGet("/compliance-rules")]
+    public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var rows = await rules.GetRulesAsync(string.IsNullOrWhiteSpace(documentType) ? null : documentType.Trim().ToUpperInvariant(), cancellationToken);
-        return Ok(rows.Select(rule => new ComplianceRuleResponse
+        try
         {
-            RuleId = rule.RuleId,
-            DocumentType = rule.DocumentType,
-            RuleName = rule.RuleName,
-            RuleKind = rule.RuleKind,
-            ExpectedLength = rule.ExpectedLength,
-            IsActive = rule.IsActive,
-            Description = rule.Description
-        }).ToArray());
+            var rows = await rules.GetRulesAsync(null, cancellationToken);
+            return View(new ComplianceRulesViewModel { Rules = rows });
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Compliance rules could not be loaded");
+            return View(new ComplianceRulesViewModel { Error = "Compliance rules could not be loaded." });
+        }
     }
 }

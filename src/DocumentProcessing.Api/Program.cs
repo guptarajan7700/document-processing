@@ -28,7 +28,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Document Processing API",
         Version = "v1",
-        Description = "Compliance document intake, mock OCR, and sample rule validation. OCR in the default configuration is simulated."
+        Description = "Compliance document intake. Text files are decoded. On Windows, images are read with Windows OCR, then checked against the PAN, AADHAR, and LOA rules."
     });
 });
 
@@ -57,6 +57,7 @@ var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<CorrelationMiddleware>();
+app.UseStaticFiles();
 app.UseSwagger();
 app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Document Processing API v1"));
 app.MapControllers();
@@ -64,7 +65,8 @@ app.MapGet("/health", () => Results.Ok(new
 {
     status = "ok",
     ocrProvider = "MockOcrProvider",
-    ocrIsMock = true
+    ocrIsMock = true,
+    imageOcr = SubmittedFileTextExtractor.ImageProvider ?? "unavailable"
 }));
 
 app.Run();

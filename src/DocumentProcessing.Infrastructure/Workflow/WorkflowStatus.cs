@@ -28,6 +28,25 @@ public static class WorkflowStatus
     // Role: Checks that the status is one of the seven known values. Next: WorkflowTransitionPolicy.IsAllowed in WorkflowTransitionPolicy.cs.
     public static bool IsKnown(string? status) => status is not null && All.Contains(status);
 
+    // Role: Maps a filter value to the exact status string. Next: DocumentsController.List in DocumentsController.cs.
+    public static bool TryCanonical(string? status, out string canonical)
+    {
+        canonical = string.Empty;
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return false;
+        }
+
+        var match = All.FirstOrDefault(item => item.Equals(status.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (match is null)
+        {
+            return false;
+        }
+
+        canonical = match;
+        return true;
+    }
+
     // Role: True for APPROVED and REJECTED. Next: none. The workflow stops.
     public static bool IsTerminal(string? status) =>
         status is Approved or Rejected;

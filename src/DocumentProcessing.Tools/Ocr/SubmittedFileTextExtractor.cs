@@ -16,6 +16,8 @@ public static class SubmittedFileTextExtractor
     private static string? _imageProvider;
 
     // Role: Connects Windows OCR for image uploads. Next: ReadAsync in this file uses it when the file is an image.
+    public static string? ImageProvider => _imageProvider;
+
     public static void UseImageReader(Func<byte[], Task<string?>> reader, string providerName)
     {
         _imageReader = reader;
@@ -33,9 +35,14 @@ public static class SubmittedFileTextExtractor
         if (IsImage(fileName, content))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var text = _imageReader is null ? null : await _imageReader(content);
+            if (_imageReader is null)
+            {
+                return new SubmittedFileText(ImageUnreadMessage, null);
+            }
+
+            var text = await _imageReader(content);
             return string.IsNullOrWhiteSpace(text)
-                ? new SubmittedFileText(ImageUnreadMessage, null)
+                ? new SubmittedFileText(ImageUnreadMessage, _imageProvider)
                 : new SubmittedFileText(text.Trim(), _imageProvider);
         }
 

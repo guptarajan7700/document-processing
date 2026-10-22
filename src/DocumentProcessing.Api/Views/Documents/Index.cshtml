@@ -1,4 +1,4 @@
-@model DocumentsPage
+@model DocumentListViewModel
 @{
     string PageUrl(int page)
     {
@@ -36,9 +36,9 @@
     <label class="field"><span>Type</span>
         <select name="documentType">
             <option value="">All</option>
-            <option selected="@Selected(Model.DocumentType, "PAN")">PAN</option>
-            <option selected="@Selected(Model.DocumentType, "AADHAR")">AADHAR</option>
-            <option selected="@Selected(Model.DocumentType, "LOA")">LOA</option>
+            <option value="PAN" selected="@Selected(Model.DocumentType, "PAN")">PAN</option>
+            <option value="AADHAR" selected="@Selected(Model.DocumentType, "AADHAR")">AADHAR</option>
+            <option value="LOA" selected="@Selected(Model.DocumentType, "LOA")">LOA</option>
         </select>
     </label>
     <button class="btn" type="submit">Apply</button>
@@ -71,7 +71,7 @@
                             <td data-label="Customer">@item.CustomerId</td>
                             <td data-label="Type">@item.DocumentType</td>
                             <td data-label="Uploaded">@item.UploadedOn.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</td>
-                            <td data-label="Status"><span class="badge @UiText.BadgeClass(item.CurrentStatus)">@UiText.StatusLabel(item.CurrentStatus)</span></td>
+                            <td data-label="Status"><span class="badge @StatusText.BadgeClass(item.CurrentStatus)">@StatusText.StatusLabel(item.CurrentStatus)</span></td>
                             <td data-label="Latest result" class="clip"><div class="clip-text" title="@item.LatestMessage">@(string.IsNullOrWhiteSpace(item.LatestMessage) ? "—" : item.LatestMessage)</div></td>
                             <td data-label=""><a href="/documents/@item.DocumentId">View</a></td>
                         </tr>
