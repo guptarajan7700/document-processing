@@ -1,8 +1,8 @@
-using DocumentProcessing.Api.Contracts;
+using DocumentProcessing.mvc.Contracts;
 using DocumentProcessing.Tools.Compliance;
 using Microsoft.AspNetCore.Mvc;
 
-namespace DocumentProcessing.Api.Controllers.Api;
+namespace DocumentProcessing.mvc.Controllers.Api;
 
 [ApiController]
 [Route("api/compliance-rules")]

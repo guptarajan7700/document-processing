@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace DocumentProcessing.Api.Contracts;
+namespace DocumentProcessing.mvc.Contracts;
 
 public sealed class UploadDocumentRequest
 {

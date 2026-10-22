@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\DocumentProcessing.Api\DocumentProcessing.Api.csproj" />
+    <ProjectReference Include="..\..\src\DocumentProcessing.mvc\DocumentProcessing.mvc.csproj" />
     <ProjectReference Include="..\..\src\DocumentProcessing.Orchestration\DocumentProcessing.Orchestration.csproj" />
     <ProjectReference Include="..\..\src\DocumentProcessing.Agents\DocumentProcessing.Agents.csproj" />
     <ProjectReference Include="..\..\src\DocumentProcessing.Tools\DocumentProcessing.Tools.csproj" />

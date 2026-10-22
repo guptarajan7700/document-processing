@@ -1,6 +1,6 @@
-using DocumentProcessing.Api.Hosting;
+using DocumentProcessing.mvc.Hosting;
 
-namespace DocumentProcessing.Api.Controllers;
+namespace DocumentProcessing.mvc.Controllers;
 
 internal static class ControllerCorrelation
 {

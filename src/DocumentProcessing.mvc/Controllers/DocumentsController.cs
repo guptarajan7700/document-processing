@@ -1,5 +1,5 @@
 using DocumentProcessing.Agents;
-using DocumentProcessing.Api.Models;
+using DocumentProcessing.mvc.Models;
 using DocumentProcessing.Infrastructure.Exceptions;
 using DocumentProcessing.Infrastructure.Models;
 using DocumentProcessing.Infrastructure.Workflow;
@@ -7,7 +7,7 @@ using DocumentProcessing.Orchestration;
 using DocumentProcessing.Tools.Sql;
 using Microsoft.AspNetCore.Mvc;
 
-namespace DocumentProcessing.Api.Controllers;
+namespace DocumentProcessing.mvc.Controllers;
 
 public sealed class DocumentsController(
     DocumentWorkflowService workflows,

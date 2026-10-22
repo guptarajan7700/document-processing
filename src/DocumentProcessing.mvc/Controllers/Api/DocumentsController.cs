@@ -1,5 +1,5 @@
-using DocumentProcessing.Api.Contracts;
-using DocumentProcessing.Api.Hosting;
+using DocumentProcessing.mvc.Contracts;
+using DocumentProcessing.mvc.Hosting;
 using DocumentProcessing.Agents;
 using DocumentProcessing.Infrastructure.Exceptions;
 using DocumentProcessing.Infrastructure.Models;
@@ -8,7 +8,7 @@ using DocumentProcessing.Orchestration;
 using DocumentProcessing.Tools.Sql;
 using Microsoft.AspNetCore.Mvc;
 
-namespace DocumentProcessing.Api.Controllers.Api;
+namespace DocumentProcessing.mvc.Controllers.Api;
 
 [ApiController]
 [Route("api/documents")]

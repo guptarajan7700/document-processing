@@ -3,7 +3,7 @@ using DocumentProcessing.Agents;
 using DocumentProcessing.ImageOcr;
 #endif
 using DocumentProcessing.Tools.Ocr;
-using DocumentProcessing.Api.Hosting;
+using DocumentProcessing.mvc.Hosting;
 using DocumentProcessing.Infrastructure;
 using DocumentProcessing.Infrastructure.Configuration;
 using DocumentProcessing.Infrastructure.Telemetry;
@@ -40,7 +40,7 @@ builder.Services.AddSingleton<WorkflowWorkQueue>();
 builder.Services.AddSingleton<IWorkflowHandoff, ChannelWorkflowHandoff>();
 builder.Services.AddHostedService<WorkflowRecoveryWorker>();
 builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource.AddService("DocumentProcessing.Api"))
+    .ConfigureResource(resource => resource.AddService("DocumentProcessing.mvc"))
     .WithTracing(tracing => tracing
         .AddSource(ProcessingTelemetry.SourceName)
         .AddAspNetCoreInstrumentation()

@@ -1,4 +1,4 @@
-namespace DocumentProcessing.Api.Models;
+namespace DocumentProcessing.mvc.Models;
 
 public static class StatusText
 {

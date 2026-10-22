@@ -1,11 +1,11 @@
 using DocumentProcessing.Agents;
-using DocumentProcessing.Api.Models;
+using DocumentProcessing.mvc.Models;
 using DocumentProcessing.Infrastructure.Configuration;
 using DocumentProcessing.Infrastructure.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
-namespace DocumentProcessing.Api.Controllers;
+namespace DocumentProcessing.mvc.Controllers;
 
 public sealed class UploadController(
     DocumentIntakeAgent intake,

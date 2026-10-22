@@ -1,0 +1,6 @@
+@DocumentProcessing.mvc_HostAddress = http://localhost:5250
+
+GET {{DocumentProcessing.mvc_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

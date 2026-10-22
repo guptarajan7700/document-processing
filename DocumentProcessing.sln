@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocumentProcessing.Agents",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocumentProcessing.Orchestration", "src\DocumentProcessing.Orchestration\DocumentProcessing.Orchestration.csproj", "{27B4B862-C2EA-4CE6-B2B0-C70CC0AD6075}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocumentProcessing.Api", "src\DocumentProcessing.Api\DocumentProcessing.Api.csproj", "{7B1230C9-F6AE-4D59-B8AD-84CB19317FD1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocumentProcessing.mvc", "src\DocumentProcessing.mvc\DocumentProcessing.mvc.csproj", "{7B1230C9-F6AE-4D59-B8AD-84CB19317FD1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{A4786CAE-3A59-4840-83A2-6BE08941E099}"
 EndProject

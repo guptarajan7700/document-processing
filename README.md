@@ -57,7 +57,7 @@ Operational columns `StoragePath`, `LockToken`, and `LockedUntil` on `Documents`
 
 ### Connection string
 
-`src/DocumentProcessing.Api/appsettings.json` uses Windows integrated security and no password:
+`src/DocumentProcessing.mvc/appsettings.json` uses Windows integrated security and no password:
 
 ```text
 Server=(localdb)\MSSQLLocalDB;Database=DocumentProcessing;Integrated Security=True;TrustServerCertificate=True;Encrypt=False
@@ -68,7 +68,7 @@ Override it with the `ConnectionStrings:DocumentProcessing` setting or an enviro
 ## Run the API
 
 ```powershell
-dotnet run --project src/DocumentProcessing.Api/DocumentProcessing.Api.csproj --launch-profile http
+dotnet run --project src/DocumentProcessing.mvc/DocumentProcessing.mvc.csproj --launch-profile http
 ```
 
 The API listens on `http://localhost:5280`. Swagger is at `http://localhost:5280/swagger`. Health is `GET /health`. Port 5080 is reserved by Windows on this machine, so the local profile uses 5280.

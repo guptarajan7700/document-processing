@@ -1,8 +1,8 @@
-using DocumentProcessing.Api.Models;
+using DocumentProcessing.mvc.Models;
 using DocumentProcessing.Tools.Compliance;
 using Microsoft.AspNetCore.Mvc;
 
-namespace DocumentProcessing.Api.Controllers;
+namespace DocumentProcessing.mvc.Controllers;
 
 public sealed class ComplianceRulesController(IComplianceRulesTool rules, ILogger<ComplianceRulesController> logger) : Controller
 {

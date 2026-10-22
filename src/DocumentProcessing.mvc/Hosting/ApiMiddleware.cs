@@ -1,7 +1,7 @@
 using DocumentProcessing.Infrastructure.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
-namespace DocumentProcessing.Api.Hosting;
+namespace DocumentProcessing.mvc.Hosting;
 
 public sealed class CorrelationMiddleware(RequestDelegate next, ILogger<CorrelationMiddleware> logger)
 {

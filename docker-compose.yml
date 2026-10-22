@@ -29,7 +29,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: src/DocumentProcessing.Api/Dockerfile
+      dockerfile: src/DocumentProcessing.mvc/Dockerfile
     depends_on:
       db-init:
         condition: service_completed_successfully

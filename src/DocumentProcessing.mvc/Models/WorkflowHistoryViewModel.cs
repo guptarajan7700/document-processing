@@ -1,6 +1,6 @@
 using DocumentProcessing.Infrastructure.Models;
 
-namespace DocumentProcessing.Api.Models;
+namespace DocumentProcessing.mvc.Models;
 
 public sealed class WorkflowHistoryViewModel
 {

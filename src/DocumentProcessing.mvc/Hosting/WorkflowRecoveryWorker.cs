@@ -4,7 +4,7 @@ using DocumentProcessing.Infrastructure.Configuration;
 using DocumentProcessing.Orchestration;
 using Microsoft.Extensions.Options;
 
-namespace DocumentProcessing.Api.Hosting;
+namespace DocumentProcessing.mvc.Hosting;
 
 public sealed class WorkflowWorkQueue
 {
